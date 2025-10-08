@@ -25,29 +25,39 @@ const GlassEffect: React.FC<GlassEffectProps> = ({
   href,
   target = "_blank",
 }) => {
+  const [isActive, setIsActive] = React.useState(false);
+
   const glassStyle = {
-    boxShadow: "0 6px 6px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 0, 0, 0.1)",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
     transitionTimingFunction: "cubic-bezier(0.175, 0.885, 0.32, 2.2)",
     ...style,
   };
 
   const content = (
     <div
-      className={`relative flex font-semibold overflow-hidden text-black cursor-pointer transition-all duration-700 ${className}`}
+      className={`relative flex font-semibold overflow-hidden text-black cursor-pointer transition-all duration-200 ${className}`}
       style={glassStyle}
+      onTouchStart={() => setIsActive(true)}
+      onTouchEnd={() => setIsActive(false)}
+      onMouseEnter={() => setIsActive(true)}
+      onMouseLeave={() => setIsActive(false)}
     >
       {/* Glass Layers */}
       <div
         className="absolute inset-0 z-0 overflow-hidden rounded-inherit rounded-3xl"
         style={{
-          backdropFilter: "blur(3px)",
+          backdropFilter: "blur(5px)",
           filter: "url(#glass-distortion)",
           isolation: "isolate",
         }}
       />
       <div
-        className="absolute inset-0 z-10 rounded-inherit"
-        style={{ background: "rgba(100, 100, 100, 0.3)" }}
+        className="absolute inset-0 z-10 rounded-inherit transition-all duration-200"
+        style={{
+          background: isActive
+            ? "rgba(115, 115, 115, 0.4)"
+            : "rgba(100, 100, 100, 0.35)",
+        }}
       />
       <div
         className="absolute inset-0 z-20 rounded-inherit rounded-3xl overflow-hidden"
@@ -102,21 +112,33 @@ const GlassDock: React.FC<{ icons: DockIcon[]; href?: string }> = ({
 const GlassButton: React.FC<{ children: React.ReactNode; href?: string }> = ({
   children,
   href,
-}) => (
-  <GlassEffect
-    href={href}
-    className="rounded-3xl px-10 py-6 hover:px-11 hover:py-7 hover:rounded-4xl overflow-hidden items-center justify-center"
-  >
-    <div
-      className="transition-all duration-700 hover:scale-95 flex items-center justify-center w-full"
-      style={{
-        transitionTimingFunction: "cubic-bezier(0.175, 0.885, 0.32, 2.2)",
-      }}
+}) => {
+  const [isPressed, setIsPressed] = React.useState(false);
+
+  return (
+    <GlassEffect
+      href={href}
+      className={`rounded-3xl overflow-hidden items-center justify-center transition-all duration-300 ${
+        isPressed ? "px-11 py-7 scale-[0.98]" : "px-10 py-6"
+      }`}
     >
-      {children}
-    </div>
-  </GlassEffect>
-);
+      <div
+        className="flex items-center justify-center w-full gap-3 transition-all duration-300"
+        style={{
+          transitionTimingFunction: "cubic-bezier(0.175, 0.885, 0.32, 2.2)",
+          transform: isPressed ? "scale(0.95)" : "scale(1)",
+        }}
+        onTouchStart={() => setIsPressed(true)}
+        onTouchEnd={() => setIsPressed(false)}
+        onMouseDown={() => setIsPressed(true)}
+        onMouseUp={() => setIsPressed(false)}
+        onMouseLeave={() => setIsPressed(false)}
+      >
+        {children}
+      </div>
+    </GlassEffect>
+  );
+};
 
 // SVG Filter Component
 const GlassFilter: React.FC = () => (
