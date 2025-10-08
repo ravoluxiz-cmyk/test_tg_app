@@ -17,6 +17,7 @@
    - Перейдите в "APIs & Services" → "Credentials"
    - Нажмите "Create Credentials" → "API Key"
    - Скопируйте API ключ
+   AIzaSyCF_JRX8SNj44hWNW8CtipxgsjNN4iuexQ
 
 3. **Сделайте календарь публичным**
    - Откройте Google Calendar
@@ -38,6 +39,7 @@
    GOOGLE_CALENDAR_ID=your-calendar-id@group.calendar.google.com
    GOOGLE_CALENDAR_API_KEY=your-api-key-here
    ```
+
 
 ### Вариант 2: Приватный календарь с сервисным аккаунтом (Рекомендуется)
 
