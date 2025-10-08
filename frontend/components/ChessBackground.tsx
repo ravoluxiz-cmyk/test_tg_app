@@ -24,7 +24,7 @@ function ChessPiece({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -100, rotate: -15 }}
+      initial={{ opacity: 0.15, y: -100, rotate: -15 }}
       animate={{ opacity: 0.15, y: 0, rotate: 0 }}
       transition={{
         duration: 2,
