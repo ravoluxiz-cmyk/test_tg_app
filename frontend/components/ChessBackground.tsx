@@ -24,14 +24,8 @@ function ChessPiece({
 
   return (
     <motion.div
-      initial={{ opacity: 0.15, y: -100, rotate: -15 }}
-      animate={{ opacity: 0.15, y: 0, rotate: 0 }}
-      transition={{
-        duration: 2,
-        delay,
-        ease: [0.23, 0.86, 0.39, 0.96] as [number, number, number, number],
-      }}
-      className={cn("absolute", className)}
+      initial={{ y: 0, rotate: 0 }}
+      className={cn("absolute opacity-15", className)}
     >
       <motion.div
         animate={{
@@ -95,8 +89,8 @@ function FloatingSquare({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ scale: 1 }}
+      className="opacity-100"
       transition={{
         duration: 1.5,
         delay,
@@ -163,49 +157,27 @@ export default function ChessBackground({
       <div className="absolute inset-0 overflow-hidden">
         <ChessPiece
           type="king"
-          delay={0.3}
           className="left-[5%] top-[15%] scale-150"
         />
         <ChessPiece
           type="queen"
-          delay={0.5}
           className="right-[8%] top-[20%] scale-125"
         />
         <ChessPiece
           type="rook"
-          delay={0.4}
           className="left-[15%] bottom-[15%] scale-110"
         />
         <ChessPiece
-          type="bishop"
-          delay={0.6}
-          className="right-[20%] bottom-[20%] scale-100"
-        />
-        <ChessPiece
           type="knight"
-          delay={0.7}
-          className="left-[25%] top-[10%] scale-90"
-        />
-        <ChessPiece
-          type="pawn"
-          delay={0.8}
-          className="right-[30%] top-[25%] scale-75"
-        />
-        <ChessPiece
-          type="pawn"
-          delay={0.9}
-          className="left-[35%] bottom-[25%] scale-75"
+          className="right-[20%] bottom-[20%] scale-90"
         />
       </div>
 
       {/* Floating squares */}
       <div className="absolute inset-0 overflow-hidden">
-        <FloatingSquare delay={0.2} size={80} className="left-[10%] top-[30%]" />
-        <FloatingSquare delay={0.4} size={60} className="right-[15%] top-[40%]" />
-        <FloatingSquare delay={0.6} size={70} className="left-[20%] bottom-[30%]" />
-        <FloatingSquare delay={0.8} size={50} className="right-[25%] bottom-[35%]" />
-        <FloatingSquare delay={1.0} size={65} className="left-[40%] top-[20%]" />
-        <FloatingSquare delay={1.2} size={55} className="right-[40%] bottom-[25%]" />
+        <FloatingSquare size={80} className="left-[10%] top-[30%]" />
+        <FloatingSquare size={60} className="right-[15%] top-[40%]" />
+        <FloatingSquare size={70} className="left-[20%] bottom-[30%]" />
       </div>
 
       {/* Content */}
