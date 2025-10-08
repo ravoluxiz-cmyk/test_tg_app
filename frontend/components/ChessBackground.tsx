@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { HoverButton } from "@/components/ui/hover-button";
 
 // Checkered pattern background
 function ChessboardPattern() {
@@ -117,18 +118,12 @@ export default function ChessBackground({
               animate="visible"
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                className="px-8 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-amber-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300"
-              >
+              <HoverButton>
                 Начать обучение
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                className="px-8 py-4 rounded-full bg-white/[0.05] border border-white/20 text-white font-medium text-sm backdrop-blur-sm hover:bg-white/[0.1] transition-all duration-300"
-              >
+              </HoverButton>
+              <HoverButton>
                 Узнать больше
-              </motion.button>
+              </HoverButton>
             </motion.div>
           </div>
         )}
