@@ -119,14 +119,12 @@ export default function ChessBackground({
             >
               <motion.button
                 whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
                 className="px-8 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-amber-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 Начать обучение
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
                 className="px-8 py-4 rounded-full bg-white/[0.05] border border-white/20 text-white font-medium text-sm backdrop-blur-sm hover:bg-white/[0.1] transition-all duration-300"
               >
                 Узнать больше
