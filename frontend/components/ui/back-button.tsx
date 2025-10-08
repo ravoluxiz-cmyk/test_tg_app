@@ -24,10 +24,10 @@ export function BackButton({ href, label = "Назад", className }: BackButton
   return (
     <HoverButton
       onClick={handleClick}
-      className={`flex items-center gap-2 w-fit ${className}`}
+      className={`flex items-center gap-2 w-fit text-white ${className}`}
     >
-      <ArrowLeft className="w-5 h-5" />
-      <span>{label}</span>
+      <ArrowLeft className="w-5 h-5 text-white" />
+      <span className="text-white">{label}</span>
     </HoverButton>
   )
 }
