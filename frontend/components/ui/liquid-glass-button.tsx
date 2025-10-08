@@ -21,7 +21,6 @@ export const LiquidGlassButton = ({
         text-white
         overflow-hidden
         transition-all duration-300
-        hover:scale-[1.02]
         ${className}
       `}
       {...props}
