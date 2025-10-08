@@ -150,36 +150,6 @@ export default function ChessBackground({
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-amber-500/[0.03] blur-3xl" />
       <div className="absolute inset-0 bg-gradient-to-tl from-blue-500/[0.02] via-transparent to-purple-500/[0.02] blur-3xl" />
 
-      {/* Checkered pattern */}
-      <ChessboardPattern />
-
-      {/* Chess pieces */}
-      <div className="absolute inset-0 overflow-hidden">
-        <ChessPiece
-          type="king"
-          className="left-[5%] top-[15%] scale-150"
-        />
-        <ChessPiece
-          type="queen"
-          className="right-[8%] top-[20%] scale-125"
-        />
-        <ChessPiece
-          type="rook"
-          className="left-[15%] bottom-[15%] scale-110"
-        />
-        <ChessPiece
-          type="knight"
-          className="right-[20%] bottom-[20%] scale-90"
-        />
-      </div>
-
-      {/* Floating squares */}
-      <div className="absolute inset-0 overflow-hidden">
-        <FloatingSquare size={80} className="left-[10%] top-[30%]" />
-        <FloatingSquare size={60} className="right-[15%] top-[40%]" />
-        <FloatingSquare size={70} className="left-[20%] bottom-[30%]" />
-      </div>
-
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 md:px-6">
         {children ? (
