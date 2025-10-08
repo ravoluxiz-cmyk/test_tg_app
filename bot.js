@@ -3,7 +3,17 @@ const TelegramBot = require('node-telegram-bot-api');
 
 // Токен бота из переменных окружения
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const webAppUrl = 'https://rep-chess-tg-app.vercel.app/';
+const webAppUrl = process.env.WEB_APP_URL;
+
+if (!token) {
+  console.error('Error: TELEGRAM_BOT_TOKEN is not set in environment variables.');
+  process.exit(1);
+}
+
+if (!webAppUrl) {
+  console.error('Error: WEB_APP_URL is not set in environment variables.');
+  process.exit(1);
+}
 
 // Создаем бота
 const bot = new TelegramBot(token, { polling: true });
