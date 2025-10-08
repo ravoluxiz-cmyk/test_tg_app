@@ -29,7 +29,7 @@ export default function TournamentsPage() {
   }, [])
 
   return (
-    <ChessBackground>
+    <ChessBackground badge="" title1="" title2="" description="">
       <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8">
         <div className="min-h-screen py-12 flex flex-col gap-8">
           {/* Header */}
@@ -39,7 +39,9 @@ export default function TournamentsPage() {
             transition={{ duration: 0.5 }}
             className="flex flex-col gap-6"
           >
-            <BackButton />
+            <div className="flex justify-start">
+              <BackButton />
+            </div>
 
             <div className="text-center">
               <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-white mb-4 uppercase tracking-tight">

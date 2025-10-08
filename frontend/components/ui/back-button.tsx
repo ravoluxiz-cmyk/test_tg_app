@@ -10,7 +10,7 @@ interface BackButtonProps {
   className?: string
 }
 
-export function BackButton({ href = "/", label = "Назад", className }: BackButtonProps) {
+export function BackButton({ href, label = "Назад", className }: BackButtonProps) {
   const router = useRouter()
 
   const handleClick = () => {
@@ -24,7 +24,7 @@ export function BackButton({ href = "/", label = "Назад", className }: Back
   return (
     <HoverButton
       onClick={handleClick}
-      className={`flex items-center gap-2 ${className}`}
+      className={`flex items-center gap-2 w-fit ${className}`}
     >
       <ArrowLeft className="w-5 h-5" />
       <span>{label}</span>
