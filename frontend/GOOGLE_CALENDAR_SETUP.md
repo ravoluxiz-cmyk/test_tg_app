@@ -1,149 +1,149 @@
-# Google Calendar Integration Setup
+# Настройка интеграции с Google Calendar
 
-## Overview
+## Обзор
 
-This application fetches tournament data from Google Calendar automatically. Events are parsed and displayed on the tournaments page.
+Приложение автоматически получает данные о турнирах из Google Calendar. События парсятся и отображаются на странице турниров.
 
-## Setup Instructions
+## Инструкция по настройке
 
-### Option 1: Public Calendar with API Key (Easiest)
+### Вариант 1: Публичный календарь с API ключом (Проще всего)
 
-1. **Enable Google Calendar API**
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing
-   - Enable "Google Calendar API"
+1. **Включите Google Calendar API**
+   - Перейдите в [Google Cloud Console](https://console.cloud.google.com/)
+   - Создайте новый проект или выберите существующий
+   - Включите "Google Calendar API"
 
-2. **Create API Key**
-   - Go to "APIs & Services" → "Credentials"
-   - Click "Create Credentials" → "API Key"
-   - Copy the API key
+2. **Создайте API ключ**
+   - Перейдите в "APIs & Services" → "Credentials"
+   - Нажмите "Create Credentials" → "API Key"
+   - Скопируйте API ключ
 
-3. **Make Calendar Public**
-   - Open Google Calendar
-   - Click settings (⚙️) → "Settings for my calendars"
-   - Select your calendar → "Access permissions"
-   - Check "Make available to public"
+3. **Сделайте календарь публичным**
+   - Откройте Google Calendar
+   - Нажмите настройки (⚙️) → "Настройки моих календарей"
+   - Выберите ваш календарь → "Права доступа"
+   - Поставьте галочку "Сделать общедоступным"
 
-4. **Get Calendar ID**
-   - In calendar settings → "Integrate calendar"
-   - Copy "Calendar ID" (looks like: `example@group.calendar.google.com`)
+4. **Получите ID календаря**
+   - В настройках календаря → "Интеграция календаря"
+   - Скопируйте "Идентификатор календаря" (выглядит как: `example@group.calendar.google.com`)
 
-5. **Configure Environment Variables**
+5. **Настройте переменные окружения**
    ```bash
    cd frontend
    cp .env.example .env.local
    ```
-   Edit `.env.local`:
+   Отредактируйте `.env.local`:
    ```
    GOOGLE_CALENDAR_ID=your-calendar-id@group.calendar.google.com
    GOOGLE_CALENDAR_API_KEY=your-api-key-here
    ```
 
-### Option 2: Private Calendar with Service Account (Recommended)
+### Вариант 2: Приватный календарь с сервисным аккаунтом (Рекомендуется)
 
-1. **Enable Google Calendar API** (same as Option 1)
+1. **Включите Google Calendar API** (как в Варианте 1)
 
-2. **Create Service Account**
-   - Go to "IAM & Admin" → "Service Accounts"
-   - Click "Create Service Account"
-   - Name it (e.g., "chess-tournament-bot")
-   - Click "Create and Continue"
-   - Skip role assignment (click "Continue")
-   - Click "Done"
+2. **Создайте сервисный аккаунт**
+   - Перейдите в "IAM & Admin" → "Service Accounts"
+   - Нажмите "Create Service Account"
+   - Назовите его (например, "chess-tournament-bot")
+   - Нажмите "Create and Continue"
+   - Пропустите назначение роли (нажмите "Continue")
+   - Нажмите "Done"
 
-3. **Generate Key**
-   - Click on created service account
-   - Go to "Keys" tab
-   - Click "Add Key" → "Create new key"
-   - Choose "JSON" format
-   - Download the JSON file
+3. **Сгенерируйте ключ**
+   - Кликните на созданный сервисный аккаунт
+   - Перейдите на вкладку "Keys"
+   - Нажмите "Add Key" → "Create new key"
+   - Выберите формат "JSON"
+   - Скачайте JSON файл
 
-4. **Share Calendar with Service Account**
-   - Open Google Calendar
-   - Click settings (⚙️) → "Settings for my calendars"
-   - Select your calendar → "Share with specific people"
-   - Click "Add people"
-   - Enter service account email (from JSON file: `client_email`)
-   - Set permission to "See all event details"
-   - Click "Send"
+4. **Поделитесь календарем с сервисным аккаунтом**
+   - Откройте Google Calendar
+   - Нажмите настройки (⚙️) → "Настройки моих календарей"
+   - Выберите ваш календарь → "Совместный доступ"
+   - Нажмите "Добавить людей"
+   - Введите email сервисного аккаунта (из JSON файла: `client_email`)
+   - Установите права "Просмотр всех сведений о мероприятии"
+   - Нажмите "Отправить"
 
-5. **Configure Environment Variables**
+5. **Настройте переменные окружения**
    ```bash
    cd frontend
    cp .env.example .env.local
    ```
-   Edit `.env.local`:
+   Отредактируйте `.env.local`:
    ```
    GOOGLE_CALENDAR_ID=your-calendar-id@group.calendar.google.com
    GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"..."}
    ```
-   > **Important**: Paste entire JSON content as single-line string
+   > **Важно**: Вставьте весь JSON контент как однострочную строку
 
-## Event Format
+## Формат событий
 
-Create calendar events with this structure for best results:
+Создавайте события календаря с такой структурой для лучших результатов:
 
-### Required Fields
-- **Summary**: Tournament title (e.g., "Блиц-турнир RepChess")
-- **Start/End Time**: Event date and time
-- **Location**: Venue address or "Онлайн"
+### Обязательные поля
+- **Название**: Название турнира (например, "Блиц-турнир RepChess")
+- **Время начала/окончания**: Дата и время события
+- **Место**: Адрес площадки или "Онлайн"
 
-### Optional Fields
-- **Description**: Details about the tournament
-- **Extended Properties** (optional):
-  - Add custom property `participants` with number of participants
-  - In Google Calendar API, use `extendedProperties.private.participants`
+### Необязательные поля
+- **Описание**: Подробности о турнире
+- **Расширенные свойства** (опционально):
+  - Добавьте кастомное свойство `participants` с количеством участников
+  - В Google Calendar API используйте `extendedProperties.private.participants`
 
-### Example Event
+### Пример события
 ```
-Title: Блиц-турнир RepChess
-Date: October 15, 2025
-Time: 18:00 - 21:00
-Location: Шахматный клуб на Невском, 25
-Description: Быстрые партии с контролем времени 5+3. Призовой фонд 50,000₽
+Название: Блиц-турнир RepChess
+Дата: 15 октября 2025
+Время: 18:00 - 21:00
+Место: Шахматный клуб на Невском, 25
+Описание: Быстрые партии с контролем времени 5+3. Призовой фонд 50,000₽
 ```
 
-## Testing
+## Тестирование
 
-1. Start development server:
+1. Запустите dev сервер:
    ```bash
    cd frontend
    npm run dev
    ```
 
-2. Open [http://localhost:3000/tournaments](http://localhost:3000/tournaments)
+2. Откройте [http://localhost:3000/tournaments](http://localhost:3000/tournaments)
 
-3. Check browser console and server logs for errors
+3. Проверьте консоль браузера и логи сервера на наличие ошибок
 
-## Troubleshooting
+## Решение проблем
 
 ### "Calendar credentials not configured"
-- Make sure `.env.local` exists and has correct variables
-- Restart dev server after changing `.env.local`
+- Убедитесь, что `.env.local` существует и содержит правильные переменные
+- Перезапустите dev сервер после изменения `.env.local`
 
 ### "Failed to fetch tournaments"
-- Check Calendar ID is correct
-- For public calendar: verify it's set to public
-- For service account: verify calendar is shared with service account email
+- Проверьте, что ID календаря правильный
+- Для публичного календаря: убедитесь, что он публичный
+- Для сервисного аккаунта: убедитесь, что календарь расшарен с email сервисного аккаунта
 
-### No events showing
-- Verify events exist in calendar
-- Check events are in the future (past events are filtered out)
-- Check event has required fields (summary, start time)
+### События не отображаются
+- Убедитесь, что события существуют в календаре
+- Проверьте, что события в будущем (прошедшие события фильтруются)
+- Проверьте, что у события есть обязательные поля (название, время начала)
 
-## Deployment
+## Деплой
 
-For production (Vercel):
+Для продакшена (Vercel):
 
-1. Go to project settings → Environment Variables
-2. Add:
+1. Перейдите в настройки проекта → Environment Variables
+2. Добавьте:
    - `GOOGLE_CALENDAR_ID`
-   - `GOOGLE_CALENDAR_API_KEY` or `GOOGLE_SERVICE_ACCOUNT_KEY`
-3. Redeploy
+   - `GOOGLE_CALENDAR_API_KEY` или `GOOGLE_SERVICE_ACCOUNT_KEY`
+3. Передеплойте
 
-## Security Notes
+## Безопасность
 
-- **Never commit** `.env.local` or credentials to git
-- Use Service Account for production (more secure)
-- Restrict API key to Calendar API only
-- Rotate keys regularly
+- **Никогда не коммитьте** `.env.local` или credentials в git
+- Используйте сервисный аккаунт для продакшена (более безопасно)
+- Ограничьте API ключ только Calendar API
+- Регулярно меняйте ключи
