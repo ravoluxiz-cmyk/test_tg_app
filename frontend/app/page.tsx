@@ -1,11 +1,10 @@
 import ChessBackground from "@/components/ChessBackground";
-import { GlassButton, GlassFilter } from "@/components/ui/liquid-glass";
+import { HoverButton } from "@/components/ui/hover-button";
 import { ShoppingBag, Calendar, GraduationCap } from "lucide-react";
 
 export default function Home() {
   return (
     <ChessBackground>
-      <GlassFilter />
 
       <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 text-center">
         <div className="flex flex-col gap-6 sm:gap-8 md:gap-10 items-center justify-center min-h-screen py-8">
@@ -25,26 +24,26 @@ export default function Home() {
 
           {/* Buttons - optimized for mobile */}
           <div className="flex flex-col w-full max-w-xs sm:max-w-md md:max-w-2xl gap-4 px-4">
-            <GlassButton>
+            <HoverButton className="flex items-center justify-center gap-3">
               <ShoppingBag className="w-7 h-7 text-white flex-shrink-0" />
               <span className="text-xl sm:text-2xl text-white font-black uppercase tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                 Купить мерч
               </span>
-            </GlassButton>
+            </HoverButton>
 
-            <GlassButton>
+            <HoverButton className="flex items-center justify-center gap-3">
               <Calendar className="w-7 h-7 text-white flex-shrink-0" />
               <span className="text-xl sm:text-2xl text-white font-black uppercase tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                 Расписание турниров
               </span>
-            </GlassButton>
+            </HoverButton>
 
-            <GlassButton>
+            <HoverButton className="flex items-center justify-center gap-3">
               <GraduationCap className="w-7 h-7 text-white flex-shrink-0" />
               <span className="text-xl sm:text-2xl text-white font-black uppercase tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                 Запись на урок
               </span>
-            </GlassButton>
+            </HoverButton>
           </div>
         </div>
       </div>
