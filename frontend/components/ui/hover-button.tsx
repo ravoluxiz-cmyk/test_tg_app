@@ -97,6 +97,7 @@ const HoverButton = React.forwardRef<HTMLButtonElement, HoverButtonProps>(
           "before:shadow-[inset_0_0_0_1px_rgba(170,202,255,0.2),inset_0_0_16px_0_rgba(170,202,255,0.1),inset_0_-3px_12px_0_rgba(170,202,255,0.15),0_1px_3px_0_rgba(0,0,0,0.50),0_4px_12px_0_rgba(0,0,0,0.45)]",
           "before:mix-blend-multiply before:transition-transform before:duration-300",
           "active:before:scale-[0.975]",
+          "disabled:opacity-50 disabled:cursor-not-allowed",
           className
         )}
         onPointerMove={handlePointerMove}

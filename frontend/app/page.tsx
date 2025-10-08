@@ -1,8 +1,13 @@
+"use client"
+
+import { useRouter } from "next/navigation"
 import ChessBackground from "@/components/ChessBackground";
 import { HoverButton } from "@/components/ui/hover-button";
 import { ShoppingBag, Calendar, GraduationCap } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter()
+
   return (
     <ChessBackground>
 
@@ -24,21 +29,30 @@ export default function Home() {
 
           {/* Buttons - optimized for mobile */}
           <div className="flex flex-col w-full max-w-xs sm:max-w-md md:max-w-2xl gap-4 px-4">
-            <HoverButton className="flex items-center justify-center gap-3">
+            <HoverButton
+              className="flex items-center justify-center gap-3"
+              disabled
+            >
               <ShoppingBag className="w-7 h-7 text-white flex-shrink-0" />
               <span className="text-xl sm:text-2xl text-white font-black uppercase tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                 Купить мерч
               </span>
             </HoverButton>
 
-            <HoverButton className="flex items-center justify-center gap-3">
+            <HoverButton
+              className="flex items-center justify-center gap-3"
+              onClick={() => router.push('/tournaments')}
+            >
               <Calendar className="w-7 h-7 text-white flex-shrink-0" />
               <span className="text-xl sm:text-2xl text-white font-black uppercase tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                 Расписание турниров
               </span>
             </HoverButton>
 
-            <HoverButton className="flex items-center justify-center gap-3">
+            <HoverButton
+              className="flex items-center justify-center gap-3"
+              disabled
+            >
               <GraduationCap className="w-7 h-7 text-white flex-shrink-0" />
               <span className="text-xl sm:text-2xl text-white font-black uppercase tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                 Запись на урок
