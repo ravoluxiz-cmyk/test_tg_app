@@ -3,6 +3,32 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+// Checkered pattern background
+function ChessboardPattern() {
+  return (
+    <div className="absolute inset-0 opacity-10">
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern
+            id="chessboard"
+            x="0"
+            y="0"
+            width="80"
+            height="80"
+            patternUnits="userSpaceOnUse"
+          >
+            <rect x="0" y="0" width="40" height="40" fill="#ffffff" />
+            <rect x="40" y="0" width="40" height="40" fill="transparent" />
+            <rect x="0" y="40" width="40" height="40" fill="transparent" />
+            <rect x="40" y="40" width="40" height="40" fill="#ffffff" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#chessboard)" />
+      </svg>
+    </div>
+  );
+}
+
 export default function ChessBackground({
   badge = "Обучающая платформа",
   title1 = "Освойте",
@@ -34,6 +60,9 @@ export default function ChessBackground({
       {/* Gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-amber-500/[0.03] blur-3xl" />
       <div className="absolute inset-0 bg-gradient-to-tl from-blue-500/[0.02] via-transparent to-purple-500/[0.02] blur-3xl" />
+
+      {/* Checkered pattern */}
+      <ChessboardPattern />
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 md:px-6">
