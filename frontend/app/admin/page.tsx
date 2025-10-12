@@ -91,14 +91,14 @@ export default function AdminMainMenuPage() {
                 <div className="text-white/70">Открыть форму создания турнира</div>
               </button>
 
-              {/* Existing Tournaments */}
+              {/* Existing Tournaments (My) */}
               <button
-                onClick={() => router.push("/tournaments")}
+                onClick={() => router.push("/admin/tournaments/mine")}
                 className="backdrop-blur-lg bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 transition-all"
               >
                 <div className="flex items-center gap-3 text-white mb-2">
                   <ListOrdered className="w-6 h-6 text-blue-400" />
-                  <span className="text-xl font-bold">Список существующих турниров</span>
+                  <span className="text-xl font-bold">Мои существующие турниры</span>
                 </div>
                 <div className="text-white/70">Перейти к просмотру списка</div>
               </button>

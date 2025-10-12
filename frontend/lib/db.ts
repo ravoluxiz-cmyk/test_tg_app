@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
   compute_performance INTEGER NOT NULL DEFAULT 0,
   hide_color_names INTEGER NOT NULL DEFAULT 0,
   show_opponent_names INTEGER NOT NULL DEFAULT 1,
+  creator_telegram_id BIGINT,
   archived INTEGER NOT NULL DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -183,6 +184,7 @@ try {
       compute_performance INTEGER NOT NULL DEFAULT 0,
       hide_color_names INTEGER NOT NULL DEFAULT 0,
       show_opponent_names INTEGER NOT NULL DEFAULT 1,
+      creator_telegram_id BIGINT,
       archived INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -225,6 +227,17 @@ try {
   `)
 } catch (e) {
   console.warn("Failed to ensure tournaments schema:", e)
+}
+
+// Ensure new column exists when upgrading existing DB
+try {
+  const cols = db.prepare("PRAGMA table_info(tournaments)").all() as Array<{ name: string }>
+  const hasCreator = cols.some(c => c.name === "creator_telegram_id")
+  if (!hasCreator) {
+    db.exec("ALTER TABLE tournaments ADD COLUMN creator_telegram_id BIGINT")
+  }
+} catch (e) {
+  console.warn("Failed to ensure creator_telegram_id column:", e)
 }
 
 export interface User {
@@ -275,6 +288,7 @@ export interface Tournament {
   compute_performance?: number
   hide_color_names?: number
   show_opponent_names?: number
+  creator_telegram_id?: number
   archived?: number
   created_at?: string
 }
@@ -416,8 +430,8 @@ export function createTournament(t: Tournament): Tournament {
       rounds, tiebreakers, team_mode,
       allow_join, allow_edit_results, allow_danger_changes,
       forbid_repeat_bye, late_join_points, hide_rating, hide_new_rating,
-      compute_performance, hide_color_names, show_opponent_names, archived
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      compute_performance, hide_color_names, show_opponent_names, creator_telegram_id, archived
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   const result = stmt.run(
@@ -440,6 +454,7 @@ export function createTournament(t: Tournament): Tournament {
     t.compute_performance ?? 0,
     t.hide_color_names ?? 0,
     t.show_opponent_names ?? 1,
+    t.creator_telegram_id ?? null,
     t.archived ?? 0
   )
 
@@ -449,6 +464,11 @@ export function createTournament(t: Tournament): Tournament {
 export function listTournaments(): Tournament[] {
   const stmt = db.prepare("SELECT * FROM tournaments ORDER BY created_at DESC")
   return stmt.all() as Tournament[]
+}
+
+export function listTournamentsByCreator(telegramId: number): Tournament[] {
+  const stmt = db.prepare("SELECT * FROM tournaments WHERE creator_telegram_id = ? ORDER BY created_at DESC")
+  return stmt.all(telegramId) as Tournament[]
 }
 
 export function deleteTournament(id: number): boolean {

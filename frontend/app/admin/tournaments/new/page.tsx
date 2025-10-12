@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import ChessBackground from "@/components/ChessBackground"
 import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
-import { ArrowLeft, LogOut } from "lucide-react"
+import { ArrowLeft, LogOut, Trash2 } from "lucide-react"
 
 export default function AdminCreateTournamentPage() {
   const router = useRouter()
@@ -33,6 +33,7 @@ export default function AdminCreateTournamentPage() {
   const [archived, setArchived] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
 
   // Restore draft if available
   useEffect(() => {
@@ -98,9 +99,46 @@ export default function AdminCreateTournamentPage() {
     }
   }
 
+  // Autosave draft when fields change
+  useEffect(() => {
+    saveDraft()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    title,
+    format,
+    pointsWin,
+    pointsLoss,
+    pointsDraw,
+    byePoints,
+    rounds,
+    teamMode,
+    allowJoin,
+    allowEditResults,
+    allowDangerChanges,
+    forbidRepeatBye,
+    lateJoinPoints,
+    hideRating,
+    hideNewRating,
+    computePerformance,
+    hideColorNames,
+    showOpponentNames,
+    archived,
+  ])
+
   const handleExit = () => {
     saveDraft()
     router.push("/admin")
+  }
+
+  const handleClearDraft = () => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("tournament_draft")
+      }
+      setInfo("Черновик очищен")
+    } catch (e) {
+      // ignore errors
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -172,19 +210,32 @@ export default function AdminCreateTournamentPage() {
               <ArrowLeft className="w-5 h-5" />
               <span className="font-semibold">К админ‑меню</span>
             </button>
-            <button
-              onClick={handleExit}
-              className="flex items-center gap-2 backdrop-blur-lg bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white hover:bg-white/20"
-              title="Сохранить черновик и выйти"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="font-semibold">Выход</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleClearDraft}
+                className="flex items-center gap-2 backdrop-blur-lg bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white hover:bg-white/20"
+                title="Очистить сохранённый черновик"
+              >
+                <Trash2 className="w-5 h-5" />
+                <span className="font-semibold">Очистить черновик</span>
+              </button>
+              <button
+                onClick={handleExit}
+                className="flex items-center gap-2 backdrop-blur-lg bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white hover:bg-white/20"
+                title="Сохранить черновик и выйти"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="font-semibold">Выход</span>
+              </button>
+            </div>
           </div>
           <h1 className="text-4xl font-black text-white mb-6">Создать турнир</h1>
 
           {error && (
             <div className="bg-red-500/20 border border-red-500 text-white rounded-lg p-4 mb-6">{error}</div>
+          )}
+          {info && (
+            <div className="bg-emerald-500/20 border border-emerald-500 text-white rounded-lg p-4 mb-6">{info}</div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
