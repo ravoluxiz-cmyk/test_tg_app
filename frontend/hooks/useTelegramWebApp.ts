@@ -65,18 +65,41 @@ export function useTelegramWebApp() {
       // Expand to full height
       tg.expand()
 
+      console.log("Telegram WebApp initialized")
+      console.log("initData available:", !!tg.initData)
+      console.log("User:", tg.initDataUnsafe?.user)
+
       setIsReady(true)
     } else {
       // For development/testing outside Telegram
-      console.warn("Telegram WebApp is not available")
+      console.warn("Telegram WebApp is not available - using mock data for development")
       setIsReady(true)
     }
   }, [])
+
+  // For development: create mock initData if not available
+  const getMockInitData = () => {
+    if (webApp?.initData) return webApp.initData
+
+    // Create mock data for development
+    const mockUser = {
+      id: 123456789,
+      first_name: "Test",
+      last_name: "User",
+      username: "testuser",
+    }
+
+    const userJson = JSON.stringify(mockUser)
+    const mockInitData = `user=${encodeURIComponent(userJson)}&auth_date=${Math.floor(Date.now() / 1000)}&hash=mock_hash_for_development`
+
+    console.log("Using mock initData for development")
+    return mockInitData
+  }
 
   return {
     webApp,
     isReady,
     user: webApp?.initDataUnsafe?.user,
-    initData: webApp?.initData || "",
+    initData: process.env.NODE_ENV === "development" ? getMockInitData() : (webApp?.initData || ""),
   }
 }

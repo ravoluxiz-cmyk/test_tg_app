@@ -34,6 +34,8 @@ export default function ProfilePage() {
 
     async function fetchProfile() {
       try {
+        console.log("Fetching profile with initData:", initData ? "present" : "missing")
+
         const response = await fetch("/api/profile", {
           headers: {
             Authorization: `Bearer ${initData}`,
@@ -41,12 +43,15 @@ export default function ProfilePage() {
         })
 
         if (!response.ok) {
-          throw new Error("Failed to fetch profile")
+          const errorData = await response.json().catch(() => ({}))
+          console.error("Profile fetch failed:", response.status, errorData)
+          throw new Error(errorData.message || `HTTP ${response.status}`)
         }
 
         const data = await response.json()
         const userProfile = data.user
 
+        console.log("Profile loaded:", userProfile)
         setProfile(userProfile)
 
         // Check if profile is incomplete (just created) - redirect to edit
@@ -56,7 +61,11 @@ export default function ProfilePage() {
         }
       } catch (err) {
         console.error("Error fetching profile:", err)
-        setError("Не удалось загрузить профиль")
+        setError(
+          err instanceof Error
+            ? `Не удалось загрузить профиль: ${err.message}`
+            : "Не удалось загрузить профиль"
+        )
       } finally {
         setLoading(false)
       }

@@ -113,11 +113,18 @@ export function getTelegramUserFromHeaders(
 ): TelegramUser | null {
   const authHeader = headers.get("authorization")
   if (!authHeader) {
+    console.error("No authorization header found")
     return null
   }
 
   // Extract initData from "Bearer <initData>" format
   const initData = authHeader.replace("Bearer ", "")
+
+  if (!initData || initData === "Bearer") {
+    console.error("initData is empty")
+    return null
+  }
+
   const botToken = process.env.TELEGRAM_BOT_TOKEN
 
   if (!botToken) {
@@ -125,11 +132,23 @@ export function getTelegramUserFromHeaders(
     return null
   }
 
+  console.log("Processing Telegram auth, NODE_ENV:", process.env.NODE_ENV)
+
   // In production, use full validation
   if (process.env.NODE_ENV === "production") {
-    return validateTelegramWebAppData(initData, botToken)
+    const user = validateTelegramWebAppData(initData, botToken)
+    if (!user) {
+      console.error("Failed to validate Telegram data in production")
+    }
+    return user
   }
 
   // In development, allow simplified parsing
-  return parseTelegramWebAppData(initData)
+  const user = parseTelegramWebAppData(initData)
+  if (!user) {
+    console.error("Failed to parse Telegram data in development")
+  } else {
+    console.log("Successfully parsed Telegram user:", user.id, user.first_name)
+  }
+  return user
 }
