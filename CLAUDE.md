@@ -1,92 +1,185 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Этот файл содержит рекомендации для Claude Code (claude.ai/code) при работе с кодом в этом репозитории.
 
-## Project Overview
+## Обзор проекта
 
-This is a Telegram bot for an educational application (обучающее приложение). The bot integrates with a web application via Telegram's Web App feature. Currently, the project only contains the bot implementation; the Next.js web application is planned but not yet implemented (see [plan.md](plan.md)).
+Это **RepChess** (Реп Шахматы) - Telegram бот интегрированный с Next.js веб-приложением для шахматного образования и управления турнирами. Проект состоит из:
 
-## Development Commands
+1. **Telegram бот** ([bot.js](bot.js)) - Точка входа, которая запускает веб-приложение
+2. **Next.js веб-приложение** ([frontend/](frontend/)) - Основное приложение с турнирами, личным кабинетом, мерчем и записью на уроки
 
-**Start the bot:**
+## Команды разработки
+
+**Бот:**
 ```bash
 npm start
-# or
+# или
 npm run dev
 ```
 
-Both commands run `node bot.js` which starts the Telegram bot with polling.
-
-## Environment Setup
-
-Required environment variables in `.env`:
-- `TELEGRAM_BOT_TOKEN` - Bot token from @BotFather
-- `WEB_APP_URL` - URL of the web application (e.g., `http://localhost:3000/` for local dev or production HTTPS URL)
-
-Use [.env.example](.env.example) as a template.
-
-## Architecture
-
-### Current Implementation
-
-**Single-file bot ([bot.js](bot.js)):**
-- Uses `node-telegram-bot-api` for Telegram Bot API interaction
-- CommonJS module format (`require()`)
-- Loads config from `.env` via `dotenv`
-- Polling-based (not webhooks)
-
-**Bot commands:**
-- `/start` - Main menu with inline keyboard
-- `/help` - Command reference
-- `/lessons` - Open lessons in Web App
-
-**Inline keyboard features:**
-- "📚 Открыть обучающее приложение" - Opens Web App at `WEB_APP_URL`
-- "📊 Мой прогресс" - Progress callback (stub implementation)
-- "⭐ Избранное" - Favorites callback, opens Web App at `/favorites` route
-
-**Event handlers:**
-- `callback_query` - Handles inline button callbacks for progress and favorites
-- `web_app_data` - Receives data sent from Web App (currently just logs it)
-- `polling_error` - Error logging
-
-### Planned Architecture
-
-See [plan.md](plan.md) for the complete development roadmap. The plan includes:
-
-**Database (SQLite):**
-- `users`, `topics`, `subtopics`, `user_progress` tables
-- Track completed lessons, favorites, and user progress
-
-**Next.js Web App:**
-- Pages: main topic list, topic detail, lesson content, favorites, completed
-- API routes for topics, subtopics, progress, and Telegram auth
-- State management with Context API or Zustand
-- Integration via Telegram Web App `initData` for auth
-
-**Project structure (planned):**
+**Frontend (Next.js):**
+```bash
+cd frontend
+npm run dev          # Разработка с Turbopack
+npm run build        # Production сборка с Turbopack
+npm start            # Запуск production сервера
+npm run lint         # Запуск ESLint
 ```
-src/
-├── app/              # Next.js app directory
-│   ├── api/         # API routes (topics, subtopics, progress, auth)
-│   └── ...pages
-├── components/       # React components
+
+Frontend работает на [http://localhost:3000](http://localhost:3000)
+
+## Настройка окружения
+
+**Корневой `.env` (для бота):**
+- `TELEGRAM_BOT_TOKEN` - Токен бота от [@BotFather](https://t.me/botfather)
+- `WEB_APP_URL` - URL веб-приложения (например, `http://localhost:3000/` для локальной разработки)
+
+Используйте [.env.example](.env.example) как шаблон.
+
+**Frontend `.env.local`:**
+- `TELEGRAM_BOT_TOKEN` - Токен бота (для валидации Telegram Web App данных)
+- `GOOGLE_CALENDAR_ID` - ID Google Calendar (формат: `example@group.calendar.google.com`)
+- Либо:
+  - `GOOGLE_CALENDAR_API_KEY` - Для публичных календарей
+  - `GOOGLE_SERVICE_ACCOUNT_KEY` - JSON credentials сервисного аккаунта для приватных календарей
+
+Используйте [frontend/.env.example](frontend/.env.example) как шаблон. См. [frontend/GOOGLE_CALENDAR_SETUP.md](frontend/GOOGLE_CALENDAR_SETUP.md) для детальных инструкций по настройке Google Calendar.
+
+## Архитектура
+
+### Telegram бот
+
+**Однофайловая реализация ([bot.js](bot.js)):**
+- Использует `node-telegram-bot-api` с polling
+- Формат CommonJS
+- Минимальная логика - только открывает веб-приложение
+
+**Текущий функционал бота:**
+- Команда `/start` отображает приветственное сообщение и кнопку для открытия веб-приложения
+- Команда `/profile` открывает личный кабинет пользователя
+- Весь текст для пользователей на русском языке
+
+### Next.js Frontend
+
+**Технологический стек:**
+- Next.js 15 (App Router) с Turbopack
+- TypeScript
+- Tailwind CSS v4 с PostCSS
+- React 19
+- Framer Motion для анимаций
+- Компоненты Radix UI
+- SQLite (better-sqlite3) для хранения данных пользователей
+- Интеграция с Google Calendar API через `googleapis`
+- Telegram Web App SDK для аутентификации
+
+**Структура проекта:**
+```
+frontend/
+├── app/
+│   ├── page.tsx                    # Главная страница с 4 основными кнопками
+│   ├── tournaments/page.tsx        # Страница списка турниров
+│   ├── profile/
+│   │   ├── page.tsx               # Страница просмотра профиля
+│   │   └── edit/page.tsx          # Страница редактирования профиля
+│   ├── api/
+│   │   ├── tournaments/route.ts   # API endpoint для турниров
+│   │   └── profile/route.ts       # API endpoints для профиля (GET, POST, PUT)
+│   ├── layout.tsx                  # Корневой layout (включает Telegram SDK)
+│   └── globals.css                 # Глобальные стили
+├── components/
+│   ├── ChessBackground.tsx         # Анимированный фон с шахматными фигурами
+│   ├── tournaments/                # Компоненты турниров
+│   └── ui/                         # Переиспользуемые UI компоненты
 ├── lib/
-│   ├── db.ts        # SQLite connection
-│   └── telegram.ts  # Telegram auth
-└── bot/             # Telegram bot (move current bot.js here)
+│   ├── db.ts                      # Функции работы с SQLite базой данных
+│   ├── telegram.ts                # Telegram Web App аутентификация
+│   ├── google-calendar/
+│   │   ├── client.ts              # Клиент Google Calendar API
+│   │   └── parser.ts              # Парсинг событий в объекты турниров
+│   └── utils.ts                   # Утилиты
+├── hooks/
+│   └── useTelegramWebApp.ts       # React хук для Telegram Web App
+├── database/
+│   ├── schema.sql                 # SQL схема базы данных
+│   └── repchess.db                # SQLite база данных (генерируется автоматически)
+└── public/                         # Статические ресурсы
 ```
 
-## Implementation Notes
+**Текущие страницы:**
+1. **Главная (`/`)** - Четыре основные кнопки действий:
+   - 🛍️ Купить мерч - отключена
+   - 📅 Расписание турниров - ссылка на `/tournaments`
+   - 👨‍🏫 Запись на урок - отключена
+   - 👤 Мой профиль - ссылка на `/profile`
 
-**When modifying the bot:**
-- Text content is in Russian - maintain this language for user-facing strings
-- Keep the existing command structure (`/start`, `/help`, `/lessons`)
-- The bot expects a web application at `WEB_APP_URL` - stub/placeholder implementations should acknowledge missing features gracefully
-- Callback data handlers are in the `callback_query` event listener (currently supports `'progress'` and `'favorites'`)
+2. **Турниры (`/tournaments`)** - Отображает предстоящие турниры из Google Calendar
 
-**When implementing the web app:**
-- Follow the database schema in [plan.md](plan.md) lines 16-47
-- Implement Telegram Web App authentication using `initData` validation
-- The bot sends users to these routes: root (`/`), `/favorites`
-- Web App should send data back to bot via Telegram's `web_app_data` mechanism
+3. **Профиль (`/profile`)** - Личный кабинет пользователя:
+   - Просмотр информации профиля
+   - Отображение шахматных рейтингов (FIDE, Chess.com, Lichess)
+   - Ссылки на профили в шахматных платформах
+   - Кнопка редактирования
+
+4. **Редактирование профиля (`/profile/edit`)** - Форма создания/редактирования профиля:
+   - Имя и фамилия (обязательные, автозаполняются из Telegram)
+   - Рейтинги (необязательные)
+   - Ссылки на профили (необязательные)
+   - Описание профиля (необязательное)
+
+**Интеграция с Google Calendar:**
+- Турниры автоматически получаются из Google Calendar
+- API маршрут: `GET /api/tournaments` получает события и парсит их
+- События должны иметь: название, время начала/окончания, местоположение
+- См. [frontend/GOOGLE_CALENDAR_SETUP.md](frontend/GOOGLE_CALENDAR_SETUP.md) для деталей конфигурации
+
+**Стилизация:**
+- Используется шахматная тема с анимированным фоном из шахматных фигур
+- Жирная типографика со шрифтом Arial Black
+- Responsive дизайн mobile-first
+- Белый текст на темном/шахматном фоне
+
+### Изначальный план vs текущее состояние
+
+Изначальный [plan.md](plan.md) описывал обучающее приложение с темами, подтемами и отслеживанием прогресса пользователей. Текущая реализация сместилась на шахматное приложение с:
+- Расписанием турниров (через Google Calendar) ✅
+- Личным кабинетом пользователя (SQLite база данных) ✅
+- Магазином мерча (запланировано)
+- Записью на уроки (запланировано)
+
+SQLite база данных **реализована** для хранения профилей пользователей. Схема в [frontend/database/schema.sql](frontend/database/schema.sql).
+
+## Заметки по реализации
+
+**При изменении бота:**
+- Весь текст для пользователей должен быть на русском языке
+- Бот в данный момент только отображает приветственный текст и открывает веб-приложение
+- Держите его простым - сложная логика должна быть в Next.js приложении
+
+**При изменении frontend:**
+- Поддерживайте шахматную тему и брендинг (RepChess)
+- Весь текст для пользователей должен быть на русском языке
+- Используйте Turbopack для сборок (он настроен в package.json scripts)
+- Приложение стилизовано с Tailwind CSS v4 - синтаксис может отличаться от v3
+- Компоненты используют framer-motion для анимаций
+
+**Интеграция с Google Calendar:**
+- Клиент календаря в [frontend/lib/google-calendar/client.ts](frontend/lib/google-calendar/client.ts)
+- Парсер событий в [frontend/lib/google-calendar/parser.ts](frontend/lib/google-calendar/parser.ts)
+- Поддерживает как публичные календари (API ключ), так и приватные календари (сервисный аккаунт)
+- События фильтруются для показа только предстоящих турниров
+
+**Интеграция с Telegram Web App:**
+- Бот запускает веб-приложение по адресу `WEB_APP_URL`
+- Аутентификация реализована через Telegram Web App `initData`
+- В production проверяется HMAC подпись с использованием `TELEGRAM_BOT_TOKEN`
+- В development используется упрощённая валидация
+- Хук `useTelegramWebApp` в [frontend/hooks/useTelegramWebApp.ts](frontend/hooks/useTelegramWebApp.ts) для работы с Telegram SDK
+- Модуль аутентификации в [frontend/lib/telegram.ts](frontend/lib/telegram.ts)
+
+**База данных и профили пользователей:**
+- SQLite база данных для хранения профилей
+- База создаётся автоматически при первом запуске в `frontend/database/repchess.db`
+- Модуль работы с БД в [frontend/lib/db.ts](frontend/lib/db.ts)
+- API endpoints для профиля: `GET /api/profile`, `POST /api/profile`, `PUT /api/profile`
+- См. [frontend/PROFILE_SETUP.md](frontend/PROFILE_SETUP.md) для подробной документации
