@@ -4,9 +4,55 @@ import { useRouter } from "next/navigation"
 import ChessBackground from "@/components/ChessBackground";
 import { HoverButton } from "@/components/ui/hover-button";
 import { ShoppingBag, Calendar, GraduationCap, User } from "lucide-react";
+import { useEffect } from "react"
+import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
 
 export default function Home() {
   const router = useRouter()
+  const { webApp, initData, isReady } = useTelegramWebApp()
+
+  // Автосохранение базовых данных пользователя при входе в мини‑приложение
+  useEffect(() => {
+    if (!isReady) return
+    if (!initData) return
+
+    const saveOnEnter = async () => {
+      try {
+        const response = await fetch("/api/profile", {
+          headers: {
+            Authorization: `Bearer ${initData}`,
+          },
+        })
+
+        if (!response.ok) {
+          // Не прерываем UX, просто логируем ошибку
+          const err = await response.json().catch(() => ({}))
+          console.error("Auto-save on enter failed:", response.status, err)
+          return
+        }
+
+        const data = await response.json()
+        console.log("Auto-saved user profile on enter:", data.user?.telegram_id)
+      } catch (e) {
+        console.error("Auto-save on enter error:", e)
+      }
+    }
+
+    saveOnEnter()
+  }, [isReady, initData])
+
+  // Настройка MainButton «Мой профиль»
+  useEffect(() => {
+    if (!webApp) return
+
+    webApp.MainButton.setText("Мой профиль")
+    webApp.MainButton.show()
+    webApp.MainButton.onClick(() => router.push("/profile"))
+
+    return () => {
+      webApp.MainButton.hide()
+    }
+  }, [webApp, router])
 
   return (
     <ChessBackground>
