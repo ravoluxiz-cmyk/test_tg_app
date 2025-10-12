@@ -23,21 +23,22 @@ const SCHEMA_PATH = path.join(process.cwd(), "database", "schema.sql")
 
 // Inline schema fallback (used if reading schema file fails)
 const DEFAULT_SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  telegram_id BIGINT UNIQUE NOT NULL,
-  username TEXT,
-  first_name TEXT NOT NULL,
-  last_name TEXT NOT NULL,
-  fide_rating INTEGER,
-  chesscom_rating INTEGER,
-  lichess_rating INTEGER,
-  chesscom_url TEXT,
-  lichess_url TEXT,
-  bio TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id BIGINT UNIQUE NOT NULL,
+    username TEXT,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    fide_rating INTEGER,
+    chesscom_rating INTEGER,
+    lichess_rating INTEGER,
+    chesscom_url TEXT,
+    lichess_url TEXT,
+    bio TEXT,
+    role TEXT NOT NULL DEFAULT 'user',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 
 CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
 
@@ -240,6 +241,17 @@ try {
   console.warn("Failed to ensure creator_telegram_id column:", e)
 }
 
+// Ensure users.role column exists when upgrading existing DB
+try {
+  const ucols = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>
+  const hasRole = ucols.some(c => c.name === "role")
+  if (!hasRole) {
+    db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+  }
+} catch (e) {
+  console.warn("Failed to ensure users.role column:", e)
+}
+
 export interface User {
   id?: number
   telegram_id: number
@@ -252,6 +264,7 @@ export interface User {
   chesscom_url?: string | null
   lichess_url?: string | null
   bio?: string | null
+  role?: string
   created_at?: string
   updated_at?: string
 }
@@ -337,8 +350,8 @@ export function createUser(user: User): User {
     INSERT INTO users (
       telegram_id, username, first_name, last_name,
       fide_rating, chesscom_rating, lichess_rating,
-      chesscom_url, lichess_url, bio
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      chesscom_url, lichess_url, bio, role
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   const result = stmt.run(
@@ -351,7 +364,8 @@ export function createUser(user: User): User {
     user.lichess_rating || null,
     user.chesscom_url || null,
     user.lichess_url || null,
-    user.bio || null
+    user.bio || null,
+    user.role || 'user'
   )
 
   return {
@@ -421,6 +435,38 @@ export default db
 export function getAllUsers(): User[] {
   const stmt = db.prepare("SELECT * FROM users ORDER BY created_at DESC")
   return stmt.all() as User[]
+}
+
+// Seed 20 test users with different roles
+export function seedTestUsers(count = 20): { inserted: number } {
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO users (
+      telegram_id, username, first_name, last_name,
+      fide_rating, chesscom_rating, lichess_rating,
+      chesscom_url, lichess_url, bio, role
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `)
+  let inserted = 0
+  const baseId = 700000000
+  for (let i = 1; i <= count; i++) {
+    const role = i <= 5 ? 'admin' : i <= 10 ? 'moderator' : 'user'
+    const tgId = baseId + i
+    const res = insert.run(
+      tgId,
+      `test${i}`,
+      `Тест${i}`,
+      `Пользователь${i}`,
+      null,
+      null,
+      null,
+      null,
+      null,
+      `Сидер ${i}`,
+      role
+    )
+    inserted += res.changes ? 1 : 0
+  }
+  return { inserted }
 }
 
 export function createTournament(t: Tournament): Tournament {
