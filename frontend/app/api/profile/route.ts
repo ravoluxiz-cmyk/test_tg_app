@@ -7,7 +7,7 @@ import {
   type UserProfileData,
 } from "@/lib/db"
 
-// GET /api/profile - Get user profile
+// GET /api/profile - Get user profile (auto-creates if not exists)
 export async function GET(request: NextRequest) {
   try {
     // Get Telegram user from headers
@@ -21,11 +21,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user from database
-    const user = getUserByTelegramId(telegramUser.id)
+    let user = getUserByTelegramId(telegramUser.id)
 
     if (!user) {
-      // User not found, return null (they need to create profile)
-      return NextResponse.json({ user: null })
+      // Auto-create profile with Telegram data
+      console.log(`Auto-creating profile for Telegram user ${telegramUser.id}`)
+      user = createUser({
+        telegram_id: telegramUser.id,
+        username: telegramUser.username,
+        first_name: telegramUser.first_name,
+        last_name: telegramUser.last_name || "",
+        fide_rating: null,
+        chesscom_rating: null,
+        lichess_rating: null,
+        chesscom_url: null,
+        lichess_url: null,
+        bio: null,
+      })
     }
 
     return NextResponse.json({ user })

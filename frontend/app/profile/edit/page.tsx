@@ -52,8 +52,8 @@ export default function ProfileEditPage() {
 
         const data = await response.json()
 
+        // Profile is always auto-created now
         if (data.user) {
-          // Existing profile
           setFormData({
             first_name: data.user.first_name || "",
             last_name: data.user.last_name || "",
@@ -64,15 +64,15 @@ export default function ProfileEditPage() {
             lichess_url: data.user.lichess_url || "",
             bio: data.user.bio || "",
           })
-          setIsNewProfile(false)
-        } else {
-          // New profile - use Telegram data
-          setFormData((prev) => ({
-            ...prev,
-            first_name: tgUser?.first_name || "",
-            last_name: tgUser?.last_name || "",
-          }))
-          setIsNewProfile(true)
+
+          // Check if profile is incomplete (only has Telegram data)
+          const isIncomplete = !data.user.fide_rating &&
+                               !data.user.chesscom_rating &&
+                               !data.user.lichess_rating &&
+                               !data.user.chesscom_url &&
+                               !data.user.lichess_url &&
+                               !data.user.bio
+          setIsNewProfile(isIncomplete)
         }
       } catch (err) {
         console.error("Error fetching profile:", err)
@@ -133,9 +133,9 @@ export default function ProfileEditPage() {
         bio: formData.bio || null,
       }
 
-      const method = isNewProfile ? "POST" : "PUT"
+      // Always use PUT since profile is auto-created on first GET
       const response = await fetch("/api/profile", {
-        method,
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${initData}`,
@@ -179,7 +179,7 @@ export default function ProfileEditPage() {
             className="text-4xl font-black text-white uppercase mb-8"
             style={{ fontFamily: "Arial Black, sans-serif" }}
           >
-            {isNewProfile ? "Создать профиль" : "Редактировать профиль"}
+            {isNewProfile ? "Заполнить профиль" : "Редактировать профиль"}
           </h1>
 
           {/* Error Message */}

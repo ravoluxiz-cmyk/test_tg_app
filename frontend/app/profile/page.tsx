@@ -45,7 +45,15 @@ export default function ProfilePage() {
         }
 
         const data = await response.json()
-        setProfile(data.user)
+        const userProfile = data.user
+
+        setProfile(userProfile)
+
+        // Check if profile is incomplete (just created) - redirect to edit
+        if (userProfile && isProfileIncomplete(userProfile)) {
+          console.log("Profile incomplete, redirecting to edit...")
+          router.push("/profile/edit")
+        }
       } catch (err) {
         console.error("Error fetching profile:", err)
         setError("Не удалось загрузить профиль")
@@ -55,7 +63,19 @@ export default function ProfilePage() {
     }
 
     fetchProfile()
-  }, [initData, isReady])
+  }, [initData, isReady, router])
+
+  // Check if profile has only basic Telegram data (needs completion)
+  function isProfileIncomplete(profile: UserProfile): boolean {
+    return (
+      !profile.fide_rating &&
+      !profile.chesscom_rating &&
+      !profile.lichess_rating &&
+      !profile.chesscom_url &&
+      !profile.lichess_url &&
+      !profile.bio
+    )
+  }
 
   // Setup back button
   useEffect(() => {
@@ -89,19 +109,12 @@ export default function ProfilePage() {
     )
   }
 
+  // Profile is always created automatically, so this should not happen
   if (!profile) {
     return (
       <ChessBackground>
-        <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-4">
-          <div className="text-white text-2xl text-center">
-            Профиль не найден
-          </div>
-          <button
-            onClick={() => router.push("/profile/edit")}
-            className="bg-white text-black px-8 py-3 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors"
-          >
-            Создать профиль
-          </button>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-white text-xl">Создание профиля...</div>
         </div>
       </ChessBackground>
     )
