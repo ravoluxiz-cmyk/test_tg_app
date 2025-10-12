@@ -451,6 +451,11 @@ export function listTournaments(): Tournament[] {
   return stmt.all() as Tournament[]
 }
 
+export function deleteTournament(id: number): boolean {
+  const res = db.prepare("DELETE FROM tournaments WHERE id = ?").run(id)
+  return (res.changes || 0) > 0
+}
+
 export function addTournamentParticipant(tp: TournamentParticipant): TournamentParticipant | null {
   // Ensure the user exists
   const user = db.prepare("SELECT id FROM users WHERE id = ?").get(tp.user_id) as { id?: number } | undefined
