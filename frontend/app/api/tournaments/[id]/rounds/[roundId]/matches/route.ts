@@ -4,10 +4,11 @@ import { listMatches, updateMatchResult } from "@/lib/db"
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string; roundId: string } }
+  { params }: { params: Promise<{ id: string; roundId: string }> }
 ) {
   try {
-    const roundId = Number(params.roundId)
+    const resolved = await params
+    const roundId = Number(resolved.roundId)
     if (!Number.isFinite(roundId)) {
       return NextResponse.json({ error: "Некорректный раунд" }, { status: 400 })
     }
@@ -19,10 +20,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string; roundId: string } }
-) {
+export async function PATCH(req: NextRequest) {
   try {
     const telegramUser = getTelegramUserFromHeaders(req.headers)
     if (!telegramUser) {

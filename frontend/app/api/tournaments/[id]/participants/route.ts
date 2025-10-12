@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { addTournamentParticipant, listTournamentParticipants } from "@/lib/db"
 
-interface Params {
-  params: { id: string }
+interface ParamsPromise {
+  params: Promise<{ id: string }>
 }
 
-export async function GET(_: NextRequest, { params }: Params) {
+export async function GET(_: NextRequest, { params }: ParamsPromise) {
   try {
-    const tournamentId = Number(params.id)
+    const { id } = await params
+    const tournamentId = Number(id)
     if (Number.isNaN(tournamentId)) {
       return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 })
     }
@@ -19,9 +20,10 @@ export async function GET(_: NextRequest, { params }: Params) {
   }
 }
 
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, { params }: ParamsPromise) {
   try {
-    const tournamentId = Number(params.id)
+    const { id } = await params
+    const tournamentId = Number(id)
     if (Number.isNaN(tournamentId)) {
       return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 })
     }

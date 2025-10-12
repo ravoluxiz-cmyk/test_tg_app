@@ -15,7 +15,7 @@ export default function AdminCreateTournamentPage() {
   const [pointsDraw, setPointsDraw] = useState(0.5)
   const [byePoints, setByePoints] = useState(0)
   const [rounds, setRounds] = useState(5)
-  const [tiebreakers, setTiebreakers] = useState<string[]>(["head_to_head", "buchholz_cut1", "buchholz"])
+  const tiebreakers: string[] = ["head_to_head", "buchholz_cut1", "buchholz"]
   const [teamMode, setTeamMode] = useState("none")
 
   // Options
@@ -126,7 +126,7 @@ export default function AdminCreateTournamentPage() {
               <label className="text-white block mb-2">Очки за игру</label>
               <select
                 value={`${pointsWin}-${pointsLoss}, ${pointsDraw}-${pointsDraw}`}
-                onChange={(e) => {
+                onChange={() => {
                   // фиксированный пресет 1-0, 0.5-0.5
                   setPointsWin(1); setPointsLoss(0); setPointsDraw(0.5)
                 }}

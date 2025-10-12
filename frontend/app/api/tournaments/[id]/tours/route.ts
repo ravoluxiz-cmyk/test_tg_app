@@ -4,10 +4,11 @@ import { listRounds as listToursInternal, createRound as createTourInternal, get
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tournamentId = Number(params.id)
+    const { id } = await params
+    const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Некорректный ID турнира" }, { status: 400 })
     }
@@ -21,7 +22,7 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const telegramUser = requireAdmin(req.headers)
@@ -29,7 +30,8 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const tournamentId = Number(params.id)
+    const { id } = await params
+    const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Некорректный ID турнира" }, { status: 400 })
     }

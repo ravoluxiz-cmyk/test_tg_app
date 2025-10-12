@@ -4,10 +4,11 @@ import { listMatches, updateMatchResult } from "@/lib/db"
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string; tourId: string } }
+  { params }: { params: Promise<{ id: string; tourId: string }> }
 ) {
   try {
-    const tourId = Number(params.tourId)
+    const resolved = await params
+    const tourId = Number(resolved.tourId)
     if (!Number.isFinite(tourId)) {
       return NextResponse.json({ error: "Некорректный тур" }, { status: 400 })
     }
@@ -19,10 +20,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string; tourId: string } }
-) {
+export async function PATCH(req: NextRequest) {
   try {
     const telegramUser = getTelegramUserFromHeaders(req.headers)
     if (!telegramUser) {

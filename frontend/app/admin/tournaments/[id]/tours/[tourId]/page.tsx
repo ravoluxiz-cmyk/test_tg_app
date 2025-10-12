@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams } from "next/navigation"
 import ChessBackground from "@/components/ChessBackground"
 
@@ -27,7 +27,7 @@ export default function TourManagePage() {
   const [pairing, setPairing] = useState(false)
   const [saving, setSaving] = useState<number | null>(null)
 
-  const loadMatches = async () => {
+  const loadMatches = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -40,13 +40,13 @@ export default function TourManagePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [tournamentId, tourId])
 
   useEffect(() => {
     if (Number.isFinite(tournamentId) && Number.isFinite(tourId)) {
       loadMatches()
     }
-  }, [tournamentId, tourId])
+  }, [tournamentId, tourId, loadMatches])
 
   const generatePairings = async () => {
     setPairing(true)

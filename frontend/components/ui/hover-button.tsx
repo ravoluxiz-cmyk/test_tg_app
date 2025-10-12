@@ -83,9 +83,23 @@ const HoverButton = React.forwardRef<HTMLButtonElement, HoverButtonProps>(
       })
     }, [circles])
 
+    const setCombinedRef = (node: HTMLButtonElement | null) => {
+      buttonRef.current = node
+      if (!ref) return
+      if (typeof ref === "function") {
+        ref(node)
+      } else {
+        try {
+          ;(ref as React.MutableRefObject<HTMLButtonElement | null>).current = node
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     return (
       <button
-        ref={buttonRef}
+        ref={setCombinedRef}
         className={cn(
           "relative isolate px-8 py-3 rounded-3xl",
           "text-foreground font-medium text-base leading-6",

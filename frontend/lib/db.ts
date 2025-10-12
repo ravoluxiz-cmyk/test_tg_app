@@ -476,7 +476,26 @@ export function listTournamentParticipants(tournamentId: number): (TournamentPar
     WHERE tp.tournament_id = ?
     ORDER BY tp.created_at ASC
   `)
-  const rows = stmt.all(tournamentId) as any[]
+  const rows = stmt.all(tournamentId) as Array<{
+    // tournament_participants (tp.*)
+    id: number
+    tournament_id: number
+    user_id: number
+    nickname: string
+    created_at: string
+    // users (u.*)
+    telegram_id: number
+    username: string | null
+    first_name: string
+    last_name: string
+    fide_rating: number | null
+    chesscom_rating: number | null
+    lichess_rating: number | null
+    chesscom_url: string | null
+    lichess_url: string | null
+    bio: string | null
+    updated_at: string
+  }>
   return rows.map(r => ({
     id: r.id,
     tournament_id: r.tournament_id,
@@ -535,7 +554,7 @@ export function listMatches(roundId: number): (Match & { white_nickname?: string
     WHERE m.round_id = ?
     ORDER BY m.board_no ASC, m.id ASC
   `)
-  return stmt.all(roundId) as any[]
+  return stmt.all(roundId) as Array<Match & { white_nickname?: string | null; black_nickname?: string | null }>
 }
 
 function getTournamentScoring(tournamentId: number) {

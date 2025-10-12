@@ -6,15 +6,16 @@ import React, { Fragment } from "react"
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string; tourId: string } }
+  { params }: { params: Promise<{ id: string; tourId: string }> }
 ) {
   try {
     const telegramUser = requireAdmin(req.headers)
     if (!telegramUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const tournamentId = Number(params.id)
-    const tourId = Number(params.tourId)
+    const resolved = await params
+    const tournamentId = Number(resolved.id)
+    const tourId = Number(resolved.tourId)
     if (!Number.isFinite(tournamentId) || !Number.isFinite(tourId)) {
       return NextResponse.json({ error: "Некорректные параметры" }, { status: 400 })
     }
