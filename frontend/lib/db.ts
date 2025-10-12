@@ -476,6 +476,11 @@ export function deleteTournament(id: number): boolean {
   return (res.changes || 0) > 0
 }
 
+export function updateTournamentArchived(id: number, archived: number): boolean {
+  const res = db.prepare("UPDATE tournaments SET archived = ? WHERE id = ?").run(archived, id)
+  return (res.changes || 0) > 0
+}
+
 export function addTournamentParticipant(tp: TournamentParticipant): TournamentParticipant | null {
   // Ensure the user exists
   const user = db.prepare("SELECT id FROM users WHERE id = ?").get(tp.user_id) as { id?: number } | undefined
