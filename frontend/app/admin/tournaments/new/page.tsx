@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import ChessBackground from "@/components/ChessBackground"
 import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
+import { ArrowLeft, LogOut } from "lucide-react"
 
 export default function AdminCreateTournamentPage() {
   const router = useRouter()
@@ -32,6 +33,75 @@ export default function AdminCreateTournamentPage() {
   const [archived, setArchived] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Restore draft if available
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("tournament_draft") : null
+      if (raw) {
+        const d = JSON.parse(raw)
+        if (d && typeof d === "object") {
+          if (d.title !== undefined) setTitle(String(d.title))
+          if (d.format !== undefined) setFormat(String(d.format))
+          if (d.points_win !== undefined) setPointsWin(Number(d.points_win))
+          if (d.points_loss !== undefined) setPointsLoss(Number(d.points_loss))
+          if (d.points_draw !== undefined) setPointsDraw(Number(d.points_draw))
+          if (d.bye_points !== undefined) setByePoints(Number(d.bye_points))
+          if (d.rounds !== undefined) setRounds(Number(d.rounds))
+          if (d.team_mode !== undefined) setTeamMode(String(d.team_mode))
+          if (d.allow_join !== undefined) setAllowJoin(Boolean(d.allow_join))
+          if (d.allow_edit_results !== undefined) setAllowEditResults(Boolean(d.allow_edit_results))
+          if (d.allow_danger_changes !== undefined) setAllowDangerChanges(Boolean(d.allow_danger_changes))
+          if (d.forbid_repeat_bye !== undefined) setForbidRepeatBye(Boolean(d.forbid_repeat_bye))
+          if (d.late_join_points !== undefined) setLateJoinPoints(Boolean(d.late_join_points))
+          if (d.hide_rating !== undefined) setHideRating(Boolean(d.hide_rating))
+          if (d.hide_new_rating !== undefined) setHideNewRating(Boolean(d.hide_new_rating))
+          if (d.compute_performance !== undefined) setComputePerformance(Boolean(d.compute_performance))
+          if (d.hide_color_names !== undefined) setHideColorNames(Boolean(d.hide_color_names))
+          if (d.show_opponent_names !== undefined) setShowOpponentNames(Boolean(d.show_opponent_names))
+          if (d.archived !== undefined) setArchived(Boolean(d.archived))
+        }
+      }
+    } catch (e) {
+      // ignore restore errors
+    }
+  }, [])
+
+  const saveDraft = () => {
+    try {
+      const draft = {
+        title,
+        format,
+        points_win: pointsWin,
+        points_loss: pointsLoss,
+        points_draw: pointsDraw,
+        bye_points: byePoints,
+        rounds,
+        team_mode: teamMode,
+        allow_join: allowJoin,
+        allow_edit_results: allowEditResults,
+        allow_danger_changes: allowDangerChanges,
+        forbid_repeat_bye: forbidRepeatBye,
+        late_join_points: lateJoinPoints,
+        hide_rating: hideRating,
+        hide_new_rating: hideNewRating,
+        compute_performance: computePerformance,
+        hide_color_names: hideColorNames,
+        show_opponent_names: showOpponentNames,
+        archived,
+      }
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tournament_draft", JSON.stringify(draft))
+      }
+    } catch (e) {
+      // ignore save errors
+    }
+  }
+
+  const handleExit = () => {
+    saveDraft()
+    router.push("/admin")
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,6 +142,8 @@ export default function AdminCreateTournamentPage() {
         throw new Error(err.error || "Не удалось создать турнир")
       }
       const created = await res.json()
+      // Clear draft after successful creation
+      try { if (typeof window !== "undefined") localStorage.removeItem("tournament_draft") } catch {}
       router.push(`/admin/tournaments/${created.id}/participants`)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Неизвестная ошибка")
@@ -91,6 +163,24 @@ export default function AdminCreateTournamentPage() {
     <ChessBackground>
       <div className="min-h-screen px-4 py-10">
         <div className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              className="flex items-center gap-2 text-white/80 hover:text-white"
+              onClick={() => router.push("/admin")}
+              title="Назад к админ‑меню"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-semibold">К админ‑меню</span>
+            </button>
+            <button
+              onClick={handleExit}
+              className="flex items-center gap-2 backdrop-blur-lg bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white hover:bg-white/20"
+              title="Сохранить черновик и выйти"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-semibold">Выход</span>
+            </button>
+          </div>
           <h1 className="text-4xl font-black text-white mb-6">Создать турнир</h1>
 
           {error && (
