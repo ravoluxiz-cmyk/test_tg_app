@@ -9,7 +9,7 @@ import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
 
 export default function Home() {
   const router = useRouter()
-  const { webApp, initData, isReady } = useTelegramWebApp()
+  const { initData, isReady } = useTelegramWebApp()
 
   // Автосохранение базовых данных пользователя при входе в мини‑приложение
   useEffect(() => {
@@ -41,18 +41,6 @@ export default function Home() {
     saveOnEnter()
   }, [isReady, initData])
 
-  // Настройка MainButton «Мой профиль»
-  useEffect(() => {
-    if (!webApp) return
-
-    webApp.MainButton.setText("Мой профиль")
-    webApp.MainButton.show()
-    webApp.MainButton.onClick(() => router.push("/profile"))
-
-    return () => {
-      webApp.MainButton.hide()
-    }
-  }, [webApp, router])
 
   return (
     <ChessBackground>
