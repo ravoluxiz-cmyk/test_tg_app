@@ -38,6 +38,7 @@ export default function ProfileEditPage() {
   // Fetch existing profile
   useEffect(() => {
     if (!isReady) return
+    if (!initData) return
 
     async function fetchProfile() {
       try {

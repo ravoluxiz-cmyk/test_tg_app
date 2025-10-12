@@ -31,6 +31,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!isReady) return
+    if (!initData) return
 
     async function fetchProfile() {
       try {
