@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
 import ChessBackground from "@/components/ChessBackground"
+import { ArrowLeft } from "lucide-react"
 
 interface ProfileFormData {
   first_name: string
@@ -89,7 +90,7 @@ export default function ProfileEditPage() {
   useEffect(() => {
     if (webApp?.BackButton) {
       webApp.BackButton.show()
-      webApp.BackButton.onClick(() => router.push("/profile"))
+      webApp.BackButton.onClick(() => router.push("/"))
 
       return () => {
         webApp.BackButton.hide()
@@ -175,12 +176,21 @@ export default function ProfileEditPage() {
       <div className="min-h-screen py-8 px-4">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
-          <h1
-            className="text-4xl font-black text-white uppercase mb-8"
-            style={{ fontFamily: "Arial Black, sans-serif" }}
-          >
-            {isNewProfile ? "Заполнить профиль" : "Редактировать профиль"}
-          </h1>
+          <div className="flex items-center gap-3 mb-8">
+            <button
+              onClick={() => router.push("/")}
+              className="bg-white text-black p-3 rounded-lg hover:bg-gray-200 transition-colors"
+              aria-label="Назад в меню"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <h1
+              className="text-4xl font-black text-white uppercase"
+              style={{ fontFamily: "Arial Black, sans-serif" }}
+            >
+              {isNewProfile ? "Заполнить профиль" : "Редактировать профиль"}
+            </h1>
+          </div>
 
           {/* Error Message */}
           {error && (

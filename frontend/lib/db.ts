@@ -2,13 +2,54 @@ import Database from "better-sqlite3"
 import fs from "fs"
 import path from "path"
 
-const DB_PATH = path.join(process.cwd(), "database", "repchess.db")
+// Determine database path with environment override and serverless fallback
+function resolveDbPath(): string {
+  const envPath = process.env.DATABASE_PATH
+  if (envPath && envPath.trim().length > 0) {
+    return envPath
+  }
+
+  // In serverless environments (e.g., Vercel), writeable path is /tmp
+  if (process.env.VERCEL || process.env.AWS_REGION || process.env.NODE_ENV === "production") {
+    return path.join("/tmp", "repchess.db")
+  }
+
+  // Default local path
+  return path.join(process.cwd(), "database", "repchess.db")
+}
+
+const DB_PATH = resolveDbPath()
 const SCHEMA_PATH = path.join(process.cwd(), "database", "schema.sql")
 
-// Ensure database directory exists
-const dbDir = path.dirname(DB_PATH)
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true })
+// Inline schema fallback (used if reading schema file fails)
+const DEFAULT_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  telegram_id BIGINT UNIQUE NOT NULL,
+  username TEXT,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  fide_rating INTEGER,
+  chesscom_rating INTEGER,
+  lichess_rating INTEGER,
+  chesscom_url TEXT,
+  lichess_url TEXT,
+  bio TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
+`
+
+// Ensure database directory exists (if not using /tmp)
+try {
+  const dbDir = path.dirname(DB_PATH)
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true })
+  }
+} catch (e) {
+  console.warn("Failed to ensure DB directory exists:", e)
 }
 
 // Initialize database connection
@@ -29,7 +70,16 @@ function initDatabase() {
 
     if (!tableExists) {
       console.log("Initializing database schema...")
-      const schema = fs.readFileSync(SCHEMA_PATH, "utf-8")
+      let schema = DEFAULT_SCHEMA_SQL
+      try {
+        if (fs.existsSync(SCHEMA_PATH)) {
+          schema = fs.readFileSync(SCHEMA_PATH, "utf-8")
+        } else {
+          console.warn("Schema file not found, using inline schema fallback")
+        }
+      } catch (readErr) {
+        console.warn("Failed to read schema file, using inline fallback:", readErr)
+      }
       db.exec(schema)
       console.log("Database schema initialized successfully")
     }
