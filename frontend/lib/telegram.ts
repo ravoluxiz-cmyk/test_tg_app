@@ -124,18 +124,16 @@ export function getTelegramUserFromHeaders(
     console.error("initData is empty")
     return null
   }
-
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
-
-  if (!botToken) {
-    console.error("TELEGRAM_BOT_TOKEN not configured")
-    return null
-  }
-
   console.log("Processing Telegram auth, NODE_ENV:", process.env.NODE_ENV)
 
   // In production, use full validation
   if (process.env.NODE_ENV === "production") {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN
+    if (!botToken) {
+      console.error("TELEGRAM_BOT_TOKEN not configured")
+      return null
+    }
+
     const user = validateTelegramWebAppData(initData, botToken)
     if (!user) {
       console.error("Failed to validate Telegram data in production")
@@ -151,4 +149,39 @@ export function getTelegramUserFromHeaders(
     console.log("Successfully parsed Telegram user:", user.id, user.first_name)
   }
   return user
+}
+
+/**
+ * Check if Telegram user is an admin based on ADMIN_TELEGRAM_ID
+ * ADMIN_TELEGRAM_ID can be:
+ * - a numeric Telegram user ID (e.g. 123456789)
+ * - a Telegram username prefixed with @ (e.g. @dprilepsky)
+ * - a comma-separated list of the above
+ */
+export function isAdmin(user: TelegramUser | null): boolean {
+  if (!user) return false
+  const raw = (process.env.ADMIN_TELEGRAM_ID || "").trim()
+  if (!raw) return false
+
+  const entries = raw.split(",").map((s) => s.trim()).filter(Boolean)
+  const username = (user.username || "").toLowerCase()
+
+  return entries.some((entry) => {
+    if (!entry) return false
+    if (entry.startsWith("@")) {
+      const target = entry.slice(1).toLowerCase()
+      return username === target
+    }
+    const idNum = Number(entry)
+    return Number.isFinite(idNum) && idNum === user.id
+  })
+}
+
+/**
+ * Require admin from request headers. Returns user if admin, otherwise null.
+ */
+export function requireAdmin(headers: Headers): TelegramUser | null {
+  const user = getTelegramUserFromHeaders(headers)
+  if (!user) return null
+  return isAdmin(user) ? user : null
 }

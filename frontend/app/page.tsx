@@ -51,7 +51,33 @@ export default function Home() {
           <div className="flex flex-col items-center gap-2 mb-8">
             <h1 className="text-7xl xs:text-8xl sm:text-9xl md:text-[10rem] lg:text-[12rem] xl:text-[14rem] font-black tracking-tighter leading-none px-4">
               <span className="text-white uppercase" style={{ fontFamily: 'Arial Black, sans-serif', letterSpacing: '-0.05em' }}>
-                REP
+                <span>R</span>
+                <span
+                  className="cursor-pointer inline-block select-none hover:text-blue-400"
+                  title="Admin access"
+                  onClick={async () => {
+                    try {
+                      if (!initData) {
+                        alert("Откройте приложение через Telegram, чтобы продолжить")
+                        return
+                      }
+                      const resp = await fetch("/api/admin/check", {
+                        headers: { Authorization: `Bearer ${initData}` },
+                      })
+                      if (resp.ok) {
+                        router.push("/admin/tournaments/new")
+                      } else {
+                        alert("Доступ запрещён")
+                      }
+                    } catch (e) {
+                      console.error("Admin gate failed:", e)
+                      alert("Ошибка проверки доступа")
+                    }
+                  }}
+                >
+                  E
+                </span>
+                <span>P</span>
               </span>
             </h1>
             <h1 className="text-7xl xs:text-8xl sm:text-9xl md:text-[10rem] lg:text-[12rem] xl:text-[14rem] font-black tracking-tighter leading-none px-4">
