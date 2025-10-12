@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
 import ChessBackground from "@/components/ChessBackground"
-import { User, Edit, Trophy, Link as LinkIcon } from "lucide-react"
+import { User, Edit, Trophy, Link as LinkIcon, ArrowLeft } from "lucide-react"
 
 interface UserProfile {
   id: number
@@ -136,6 +136,13 @@ export default function ProfilePage() {
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => router.push("/")}
+              className="bg-white text-black p-3 rounded-lg hover:bg-gray-200 transition-colors"
+              aria-label="Назад в меню"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
             <h1 className="text-4xl font-black text-white uppercase" style={{ fontFamily: 'Arial Black, sans-serif' }}>
               Профиль
             </h1>
