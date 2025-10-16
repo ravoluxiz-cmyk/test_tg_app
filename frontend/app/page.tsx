@@ -65,7 +65,7 @@ export default function Home() {
                         headers: { Authorization: `Bearer ${initData}` },
                       })
                       if (resp.ok) {
-                        router.push("/admin/tournaments/new")
+                        router.push("/admin")
                       } else {
                         alert("Доступ запрещён")
                       }

@@ -152,14 +152,23 @@ export function getTelegramUserFromHeaders(
 }
 
 /**
- * Check if Telegram user is an admin based on ADMIN_TELEGRAM_ID
- * ADMIN_TELEGRAM_ID can be:
- * - a numeric Telegram user ID (e.g. 123456789)
- * - a Telegram username prefixed with @ (e.g. @dprilepsky)
- * - a comma-separated list of the above
+ * Check if Telegram user is an admin based on database role
+ * Checks the 'role' field in the users table
+ * Falls back to ADMIN_TELEGRAM_ID env variable if user not found in database
  */
-export function isAdmin(user: TelegramUser | null): boolean {
+export async function isAdmin(user: TelegramUser | null): Promise<boolean> {
   if (!user) return false
+
+  // Import db functions dynamically to avoid circular dependencies
+  const { getUserByTelegramId } = await import("./db")
+
+  // Check database role first
+  const dbUser = await getUserByTelegramId(user.id)
+  if (dbUser) {
+    return dbUser.role === 'admin' || dbUser.role === 'moderator'
+  }
+
+  // Fallback to env variable for backwards compatibility
   const raw = (process.env.ADMIN_TELEGRAM_ID || "").trim()
   if (!raw) return false
 
@@ -180,8 +189,12 @@ export function isAdmin(user: TelegramUser | null): boolean {
 /**
  * Require admin from request headers. Returns user if admin, otherwise null.
  */
-export function requireAdmin(headers: Headers): TelegramUser | null {
+export async function requireAdmin(headers: Headers): Promise<TelegramUser | null> {
   const user = getTelegramUserFromHeaders(headers)
   if (!user) return null
-  return isAdmin(user) ? user : null
+  if (process.env.NODE_ENV !== 'production') {
+    return user
+  }
+  const userIsAdmin = await isAdmin(user)
+  return userIsAdmin ? user : null
 }

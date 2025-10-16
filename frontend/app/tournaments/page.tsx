@@ -14,7 +14,7 @@ export default function TournamentsPage() {
   useEffect(() => {
     async function fetchTournaments() {
       try {
-        const response = await fetch("/api/tournaments")
+        const response = await fetch("/api/tournaments/calendar")
         if (!response.ok) throw new Error("Failed to fetch tournaments")
         const data = await response.json()
         setTournaments(data)

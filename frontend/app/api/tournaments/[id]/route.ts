@@ -2,29 +2,49 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/telegram"
 import { deleteTournament, getTournamentById, updateTournamentArchived } from "@/lib/db"
 
-interface ParamsPromise {
-  params: Promise<{ id: string }>
+interface Params {
+  params: { id: string }
 }
 
-export async function DELETE(request: NextRequest, { params }: ParamsPromise) {
+export async function GET(_request: NextRequest, { params }: Params) {
   try {
-    const adminUser = requireAdmin(request.headers)
-    if (!adminUser) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    }
-
-    const { id } = await params
+    const { id } = params
     const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Некорректный ID турнира" }, { status: 400 })
     }
 
-    const exists = getTournamentById(tournamentId)
+    const tournament = await getTournamentById(tournamentId)
+    if (!tournament) {
+      return NextResponse.json({ error: "Турнир не найден" }, { status: 404 })
+    }
+
+    return NextResponse.json(tournament)
+  } catch (e) {
+    console.error("Failed to get tournament:", e)
+    return NextResponse.json({ error: "Внутренняя ошибка" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: Params) {
+  try {
+    const adminUser = await requireAdmin(request.headers)
+    if (!adminUser) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    const { id } = params
+    const tournamentId = Number(id)
+    if (!Number.isFinite(tournamentId)) {
+      return NextResponse.json({ error: "Некорректный ID турнира" }, { status: 400 })
+    }
+
+    const exists = await getTournamentById(tournamentId)
     if (!exists) {
       return NextResponse.json({ error: "Турнир не найден" }, { status: 404 })
     }
 
-    const ok = deleteTournament(tournamentId)
+    const ok = await deleteTournament(tournamentId)
     if (!ok) {
       return NextResponse.json({ error: "Не удалось удалить турнир" }, { status: 500 })
     }
@@ -35,20 +55,20 @@ export async function DELETE(request: NextRequest, { params }: ParamsPromise) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
+export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    const adminUser = requireAdmin(request.headers)
+    const adminUser = await requireAdmin(request.headers)
     if (!adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const { id } = await params
+    const { id } = params
     const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Некорректный ID турнира" }, { status: 400 })
     }
 
-    const exists = getTournamentById(tournamentId)
+    const exists = await getTournamentById(tournamentId)
     if (!exists) {
       return NextResponse.json({ error: "Турнир не найден" }, { status: 404 })
     }
@@ -59,7 +79,7 @@ export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
       return NextResponse.json({ error: "Укажите archived: 0 или 1" }, { status: 400 })
     }
 
-    const ok = updateTournamentArchived(tournamentId, archived)
+    const ok = await updateTournamentArchived(tournamentId, archived)
     if (!ok) {
       return NextResponse.json({ error: "Не удалось обновить статус" }, { status: 500 })
     }

@@ -30,26 +30,42 @@ export default function TournamentParticipantsPage() {
   const [users, setUsers] = useState<User[]>([])
   const [participants, setParticipants] = useState<Participant[]>([])
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+  const [query, setQuery] = useState("")
   const [nickname, setNickname] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [seeding, setSeeding] = useState(false)
+  const [seedInfo, setSeedInfo] = useState<string | null>(null)
+  const [searchResults, setSearchResults] = useState<User[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [tours, setTours] = useState<Array<{ id: number; number: number; status: string; created_at: string }>>([])
+  const [tournamentMeta, setTournamentMeta] = useState<{ rounds: number; archived: number } | null>(null)
 
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true)
       try {
-        const [usersRes, partsRes] = await Promise.all([
+        const [usersRes, partsRes, toursRes, tournamentRes] = await Promise.all([
           fetch("/api/users"),
           fetch(`/api/tournaments/${tournamentId}/participants`),
+          fetch(`/api/tournaments/${tournamentId}/tours`),
+          fetch(`/api/tournaments/${tournamentId}`),
         ])
         if (!usersRes.ok) throw new Error("Не удалось загрузить пользователей")
         if (!partsRes.ok) throw new Error("Не удалось загрузить участников")
+        if (!toursRes.ok) throw new Error("Не удалось загрузить туры")
+        if (!tournamentRes.ok) throw new Error("Не удалось загрузить турнир")
         const usersData = await usersRes.json()
         const partsData = await partsRes.json()
-        setUsers(usersData)
-        setParticipants(partsData)
+        const toursData = await toursRes.json()
+        const tournamentData = await tournamentRes.json()
+        setUsers(Array.isArray(usersData) ? usersData : [])
+        setParticipants(Array.isArray(partsData) ? partsData : [])
+        setTours(Array.isArray(toursData) ? toursData : [])
+        setTournamentMeta(tournamentData && typeof tournamentData === 'object' ? { rounds: Number(tournamentData.rounds || 0), archived: Number(tournamentData.archived || 0) } : null)
       } catch (e) {
         setError(e instanceof Error ? e.message : "Неизвестная ошибка")
       } finally {
@@ -88,6 +104,14 @@ export default function TournamentParticipantsPage() {
   const startTour = async () => {
     if (!Number.isFinite(tournamentId)) return
     if (participants.length < 2) return setError("Добавьте минимум двух участников")
+    const planned = tournamentMeta?.rounds ?? 0
+    const archived = tournamentMeta?.archived ?? 0
+    if (archived === 1) {
+      return setError("Турнир завершён, запуск новых туров недоступен")
+    }
+    if (planned > 0 && tours.length >= planned) {
+      return setError(`Достигнут лимит туров (${planned}) — нельзя начать новый тур`)
+    }
     setStarting(true)
     setError(null)
     try {
@@ -123,8 +147,124 @@ export default function TournamentParticipantsPage() {
     }
   }
 
+  const deleteAllTours = async () => {
+    if (!Number.isFinite(tournamentId)) return
+    if (!confirm("Удалить все туры? Действие необратимо.")) return
+    setError(null)
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/tours`, {
+        method: "DELETE",
+        headers: initData ? { Authorization: `Bearer ${initData}` } : undefined,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Не удалось удалить туры")
+      }
+      setTours([])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Неизвестная ошибка")
+    }
+  }
+
+  const deleteTour = async (tourId: number) => {
+    if (!Number.isFinite(tournamentId)) return
+    if (!confirm("Удалить этот тур? Действие необратимо.")) return
+    setError(null)
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/tours/${tourId}`, {
+        method: "DELETE",
+        headers: initData ? { Authorization: `Bearer ${initData}` } : undefined,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Не удалось удалить тур")
+      }
+      setTours((prev) => prev.filter((t) => t.id !== tourId))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Неизвестная ошибка")
+    }
+  }
+
   const backToCreate = () => {
     router.push("/admin/tournaments/new")
+  }
+
+  const safeUsers: User[] = Array.isArray(users) ? users : []
+  const filteredUsers = query
+    ? safeUsers.filter((u) => (u.username || "").toLowerCase().includes(query.toLowerCase()))
+    : []
+
+  // Live search when query starts with '@'
+  useEffect(() => {
+    const raw = query.trim()
+    const isAt = raw.startsWith("@")
+    const fragment = isAt ? raw.slice(1).trim() : ""
+
+    if (!isAt || fragment.length === 0) {
+      setSearchResults([])
+      setShowDropdown(false)
+      setSearchLoading(false)
+      return
+    }
+
+    setSearchLoading(true)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(raw)}&limit=8`, { signal: controller.signal })
+        if (!res.ok) {
+          setSearchResults([])
+          setShowDropdown(false)
+          return
+        }
+        const data = await res.json()
+        setSearchResults(Array.isArray(data) ? data : [])
+        setShowDropdown(true)
+      } catch (_) {
+        // ignore fetch aborts
+        setShowDropdown(false)
+      } finally {
+        setSearchLoading(false)
+      }
+    }, 250)
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeoutId)
+    }
+  }, [query])
+
+  const seedUsers = async () => {
+    setSeeding(true)
+    setSeedInfo(null)
+    setError(null)
+    try {
+      const res = await fetch("/api/dev/seed-users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(initData ? { Authorization: `Bearer ${initData}` } : {}),
+        },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Не удалось добавить тестовых пользователей")
+      }
+      const data = await res.json()
+      const insertedCount = typeof data?.inserted === "number"
+        ? data.inserted
+        : (typeof (data as any)?.count === "number" ? (data as any).count : 0)
+      setSeedInfo(`Добавлено пользователей: ${insertedCount}`)
+      const usersRes = await fetch("/api/users")
+      if (usersRes.ok) {
+        const usersData = await usersRes.json()
+        setUsers(Array.isArray(usersData) ? usersData : [])
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Неизвестная ошибка")
+    } finally {
+      setSeeding(false)
+    }
   }
 
   return (
@@ -139,22 +279,79 @@ export default function TournamentParticipantsPage() {
 
           {/* Форма добавления участника */}
           <div className="space-y-4 bg-white/5 p-4 rounded-lg">
-            <div>
-              <label className="text-white block mb-2">Выбор пользователя</label>
-              <select
-                value={selectedUserId ?? ""}
-                onChange={(e) => setSelectedUserId(Number(e.target.value))}
+            <div className="relative">
+              <label className="text-white block mb-2">Поиск по нику Telegram</label>
+              <input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setSelectedUserId(null)
+                }}
                 className="w-full bg-white/10 text-white p-3 rounded-lg outline-none"
-              >
-                <option value="" disabled>
-                  {loading ? "Загрузка..." : "Выберите пользователя"}
-                </option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id} className="bg-slate-800 text-white">
-                    @{u.username || u.telegram_id} — {u.first_name ?? ""} {u.last_name ?? ""}
-                  </option>
-                ))}
-              </select>
+                placeholder={loading ? "Загрузка пользователей..." : "Введите ник, например test1"}
+              />
+              {/* Dropdown results when searching with '@' */}
+              {showDropdown && (
+                <div className="absolute left-0 right-0 mt-2 rounded-lg border border-white/20 bg-gray-900/90 backdrop-blur z-10 max-h-64 overflow-auto">
+                  {searchLoading && (
+                    <div className="px-3 py-2 text-white/70">Идет поиск...</div>
+                  )}
+                  {!searchLoading && searchResults.length === 0 && (
+                    <div className="px-3 py-2 text-white/70">Ничего не найдено</div>
+                  )}
+                  {!searchLoading && searchResults.length > 0 && (
+                    <div className="py-1">
+                      {searchResults.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedUserId(u.id)
+                            setQuery(`@${u.username || ""}`)
+                            setShowDropdown(false)
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-white/10 text-white"
+                        >
+                          @{u.username || u.telegram_id} — {u.first_name ?? ""} {u.last_name ?? ""}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Fallback local suggestions without '@' */}
+              {!query.startsWith("@") && query && filteredUsers.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {filteredUsers.slice(0, 8).map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedUserId(u.id)
+                        setQuery(u.username || "")
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                    >
+                      @{u.username || u.telegram_id} — {u.first_name ?? ""} {u.last_name ?? ""}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedUserId && (
+                <div className="mt-2 text-white/80 text-sm">
+                  Выбран: @{users.find((u) => u.id === selectedUserId)?.username || users.find((u) => u.id === selectedUserId)?.telegram_id || ""}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedUserId(null)
+                      setQuery("")
+                    }}
+                    className="ml-2 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white"
+                  >
+                    Сбросить
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>
@@ -174,6 +371,18 @@ export default function TournamentParticipantsPage() {
             >
               {adding ? "Добавление..." : "Добавить участника"}
             </button>
+
+            <div className="mt-3 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={seedUsers}
+                disabled={seeding}
+                className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-semibold disabled:opacity-60"
+                title="Добавить тестовых пользователей в базу"
+              >
+                {seeding ? "Добавление пользователей..." : "Добавить тестовых пользователей"}
+              </button>
+              {seedInfo && <span className="text-white/80 text-sm self-center">{seedInfo}</span>}
+            </div>
           </div>
 
           {/* Список участников */}
@@ -219,12 +428,125 @@ export default function TournamentParticipantsPage() {
               </button>
               <button
                 onClick={startTour}
-                disabled={starting || participants.length < 2}
+                disabled={
+                  starting ||
+                  participants.length < 2 ||
+                  (tournamentMeta?.archived === 1) ||
+                  ((tournamentMeta?.rounds ?? 0) > 0 && tours.length >= (tournamentMeta?.rounds ?? 0))
+                }
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold disabled:opacity-60"
                 title={participants.length < 2 ? "Добавьте минимум двух участников" : "Начать тур"}
               >
                 {starting ? "Запуск тура..." : "Начать тур"}
               </button>
+              {tournamentMeta?.archived === 1 && (
+                <div className="text-white/70">Турнир завершён</div>
+              )}
+              {(tournamentMeta?.rounds ?? 0) > 0 && tours.length >= (tournamentMeta?.rounds ?? 0) && (
+                <div className="text-white/70">Достигнут лимит туров ({tournamentMeta?.rounds ?? 0})</div>
+              )}
+            </div>
+
+            {/* Текущие туры и переход */}
+            <div className="mt-6 space-y-3">
+              <h3 className="text-white text-lg font-semibold">Туры</h3>
+              {tours.length === 0 ? (
+                <div className="text-white/70">Пока туров нет</div>
+              ) : (
+                <div className="space-y-2">
+                  {/* Инфо-плашка и кнопки: адаптивный лэйаут */}
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-white">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="font-bold">Всего туров: {tours.length}</div>
+                        <div className="text-white/70 text-sm">Последний: №{tours[tours.length - 1].number} ({tours[tours.length - 1].status})</div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <button
+                          onClick={() => router.push(`/admin/tournaments/${tournamentId}/tours/${tours[tours.length - 1].id}`)}
+                          className="w-full sm:w-auto px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold"
+                        >
+                          Открыть последний тур
+                        </button>
+                        <button
+                          onClick={deleteAllTours}
+                          className="w-full sm:w-auto px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold"
+                        >
+                          Удалить все туры
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Список ссылок на все туры: мобильные карточки */}
+                  <div className="md:hidden space-y-2">
+                    {tours.map((t) => (
+                      <div key={t.id} className="bg-white/5 border border-white/10 rounded-lg p-3 text-white">
+                        <div className="flex items-center justify-between">
+                          <div className="font-bold">Тур №{t.number}</div>
+                          <span className="text-xs px-2 py-1 rounded bg-white/10 border border-white/20">{t.status}</span>
+                        </div>
+                        <div className="mt-1 text-white/70 text-sm">Создан: {new Date(t.created_at).toLocaleString()}</div>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => router.push(`/admin/tournaments/${tournamentId}/tours/${t.id}`)}
+                            className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white"
+                          >
+                            Открыть
+                          </button>
+                          <button
+                            onClick={() => deleteTour(t.id)}
+                            className="px-3 py-2 rounded bg-red-600 hover:bg-red-500 text-white"
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Список ссылок на все туры: таблица для md+ */}
+                  <div className="hidden md:block bg-white/5 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-white">
+                        <thead>
+                          <tr className="bg-white/10">
+                            <th className="text-left p-3">№</th>
+                            <th className="text-left p-3">Статус</th>
+                            <th className="text-left p-3">Создан</th>
+                            <th className="text-left p-3">Действие</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tours.map((t) => (
+                            <tr key={t.id} className="border-t border-white/10">
+                              <td className="p-3">{t.number}</td>
+                              <td className="p-3">{t.status}</td>
+                              <td className="p-3 whitespace-nowrap">{new Date(t.created_at).toLocaleString()}</td>
+                              <td className="p-3">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => router.push(`/admin/tournaments/${tournamentId}/tours/${t.id}`)}
+                                    className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white"
+                                  >
+                                    Открыть
+                                  </button>
+                                  <button
+                                    onClick={() => deleteTour(t.id)}
+                                    className="px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-white"
+                                  >
+                                    Удалить
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

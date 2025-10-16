@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { addTournamentParticipant, listTournamentParticipants } from "@/lib/db"
 
-interface ParamsPromise {
-  params: Promise<{ id: string }>
-}
-
-export async function GET(_: NextRequest, { params }: ParamsPromise) {
+export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params
+    const { id } = params
     const tournamentId = Number(id)
-    if (Number.isNaN(tournamentId)) {
+    if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 })
     }
-    const participants = listTournamentParticipants(tournamentId)
+    const participants = await listTournamentParticipants(tournamentId)
     return NextResponse.json(participants)
   } catch (e) {
     console.error("Failed to list participants:", e)
@@ -20,11 +16,11 @@ export async function GET(_: NextRequest, { params }: ParamsPromise) {
   }
 }
 
-export async function POST(request: NextRequest, { params }: ParamsPromise) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params
+    const { id } = params
     const tournamentId = Number(id)
-    if (Number.isNaN(tournamentId)) {
+    if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 })
     }
 
@@ -35,7 +31,7 @@ export async function POST(request: NextRequest, { params }: ParamsPromise) {
       return NextResponse.json({ error: "user_id и nickname обязательны" }, { status: 400 })
     }
 
-    const created = addTournamentParticipant({ tournament_id: tournamentId, user_id, nickname })
+    const created = await addTournamentParticipant({ tournament_id: tournamentId, user_id, nickname })
     if (!created) {
       return NextResponse.json({ error: "Не удалось добавить участника (возможно, ник занят)" }, { status: 400 })
     }

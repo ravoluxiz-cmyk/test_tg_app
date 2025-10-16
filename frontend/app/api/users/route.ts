@@ -3,7 +3,7 @@ import { getAllUsers } from "@/lib/db"
 
 export async function GET() {
   try {
-    const users = getAllUsers()
+    const users = await getAllUsers()
     return NextResponse.json(users)
   } catch (e) {
     console.error("Failed to list users:", e)

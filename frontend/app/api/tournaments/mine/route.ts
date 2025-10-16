@@ -4,11 +4,11 @@ import { listTournamentsByCreator } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   try {
-    const adminUser = requireAdmin(request.headers)
+    const adminUser = await requireAdmin(request.headers)
     if (!adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const tournaments = listTournamentsByCreator(adminUser.id)
+    const tournaments = await listTournamentsByCreator(adminUser.id)
     return NextResponse.json(tournaments)
   } catch (e) {
     console.error("Failed to list my tournaments:", e)

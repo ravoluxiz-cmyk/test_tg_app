@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import ChessBackground from "@/components/ChessBackground"
-import { ArrowLeft, Archive } from "lucide-react"
+import { ArrowLeft, Archive, ListOrdered } from "lucide-react"
 
 type DbTournament = {
   id: number
@@ -84,6 +84,15 @@ export default function AdminArchivePage() {
                   {t.created_at && (
                     <div className="text-white/60">Создан: {new Date(t.created_at).toLocaleString("ru-RU")}</div>
                   )}
+                  <div className="mt-4">
+                    <button
+                      onClick={() => router.push(`/admin/tournaments/${t.id}/results`)}
+                      className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg"
+                      title="Перейти к таблице результатов"
+                    >
+                      <ListOrdered className="w-4 h-4" /> К таблице результатов
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

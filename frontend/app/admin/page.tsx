@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import ChessBackground from "@/components/ChessBackground"
 import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
-import { Shield, PlusCircle, ListOrdered, Trash2, Archive, ArrowLeft } from "lucide-react"
+import { Shield, PlusCircle, ListOrdered, Trash2, Archive, ArrowLeft, List } from "lucide-react"
 
 export default function AdminMainMenuPage() {
   const router = useRouter()
@@ -96,16 +96,17 @@ export default function AdminMainMenuPage() {
                 <div className="text-white/70">Открыть форму создания турнира</div>
               </button>
 
-              {/* Existing Tournaments (My) */}
+              {/* Unified Tournaments */}
               <button
-                onClick={() => router.push("/admin/tournaments/mine")}
+                onClick={() => router.push("/admin/tournaments")}
                 className="w-full backdrop-blur-lg bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-6 text-left hover:bg-white/10 transition-all"
+                title="Единый список турниров с переключателем «Все/Мои»"
               >
                 <div className="flex items-center gap-3 text-white mb-2">
-                  <ListOrdered className="w-6 h-6 text-blue-400" />
-                  <span className="text-lg sm:text-xl font-bold">Мои существующие турниры</span>
+                  <List className="w-6 h-6 text-violet-400" />
+                  <span className="text-lg sm:text-xl font-bold">Турниры</span>
                 </div>
-                <div className="text-white/70">Перейти к просмотру списка</div>
+                <div className="text-white/70">Откройте список и переключайтесь между «Все» и «Мои»</div>
               </button>
 
               {/* Delete Tournament */}

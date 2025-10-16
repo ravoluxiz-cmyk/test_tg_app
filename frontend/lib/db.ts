@@ -1,257 +1,6 @@
-import Database from "better-sqlite3"
-import fs from "fs"
-import path from "path"
+import { supabase } from './supabase'
 
-// Determine database path with environment override and serverless fallback
-function resolveDbPath(): string {
-  const envPath = process.env.DATABASE_PATH
-  if (envPath && envPath.trim().length > 0) {
-    return envPath
-  }
-
-  // In serverless environments (e.g., Vercel), writeable path is /tmp
-  if (process.env.VERCEL || process.env.AWS_REGION || process.env.NODE_ENV === "production") {
-    return path.join("/tmp", "repchess.db")
-  }
-
-  // Default local path
-  return path.join(process.cwd(), "database", "repchess.db")
-}
-
-const DB_PATH = resolveDbPath()
-const SCHEMA_PATH = path.join(process.cwd(), "database", "schema.sql")
-
-// Inline schema fallback (used if reading schema file fails)
-const DEFAULT_SCHEMA_SQL = `
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    telegram_id BIGINT UNIQUE NOT NULL,
-    username TEXT,
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
-    fide_rating INTEGER,
-    chesscom_rating INTEGER,
-    lichess_rating INTEGER,
-    chesscom_url TEXT,
-    lichess_url TEXT,
-    bio TEXT,
-    role TEXT NOT NULL DEFAULT 'user',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
-
--- Tournaments
-CREATE TABLE IF NOT EXISTS tournaments (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  format TEXT NOT NULL DEFAULT 'swiss_fide_javafo',
-  points_win REAL NOT NULL DEFAULT 1.0,
-  points_loss REAL NOT NULL DEFAULT 0.0,
-  points_draw REAL NOT NULL DEFAULT 0.5,
-  bye_points REAL NOT NULL DEFAULT 0.0,
-  rounds INTEGER NOT NULL DEFAULT 5,
-  tiebreakers TEXT NOT NULL DEFAULT 'head_to_head, buchholz_cut1, buchholz',
-  team_mode TEXT NOT NULL DEFAULT 'none',
-  allow_join INTEGER NOT NULL DEFAULT 0,
-  allow_edit_results INTEGER NOT NULL DEFAULT 0,
-  allow_danger_changes INTEGER NOT NULL DEFAULT 0,
-  forbid_repeat_bye INTEGER NOT NULL DEFAULT 1,
-  late_join_points INTEGER NOT NULL DEFAULT 0,
-  hide_rating INTEGER NOT NULL DEFAULT 0,
-  hide_new_rating INTEGER NOT NULL DEFAULT 0,
-  compute_performance INTEGER NOT NULL DEFAULT 0,
-  hide_color_names INTEGER NOT NULL DEFAULT 0,
-  show_opponent_names INTEGER NOT NULL DEFAULT 1,
-  creator_telegram_id BIGINT,
-  archived INTEGER NOT NULL DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS tournament_participants (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  tournament_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
-  nickname TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(tournament_id, nickname),
-  FOREIGN KEY(tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Rounds
-CREATE TABLE IF NOT EXISTS rounds (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  tournament_id INTEGER NOT NULL,
-  number INTEGER NOT NULL,
-  status TEXT NOT NULL DEFAULT 'planned',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  paired_at DATETIME,
-  locked_at DATETIME,
-  UNIQUE(tournament_id, number),
-  FOREIGN KEY(tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
-);
-
--- Matches
-CREATE TABLE IF NOT EXISTS matches (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  round_id INTEGER NOT NULL,
-  white_participant_id INTEGER,
-  black_participant_id INTEGER,
-  board_no INTEGER,
-  result TEXT NOT NULL DEFAULT 'not_played',
-  score_white REAL NOT NULL DEFAULT 0,
-  score_black REAL NOT NULL DEFAULT 0,
-  source TEXT,
-  notes TEXT,
-  FOREIGN KEY(round_id) REFERENCES rounds(id) ON DELETE CASCADE,
-  FOREIGN KEY(white_participant_id) REFERENCES tournament_participants(id) ON DELETE SET NULL,
-  FOREIGN KEY(black_participant_id) REFERENCES tournament_participants(id) ON DELETE SET NULL
-);
-`
-
-// Ensure database directory exists (if not using /tmp)
-try {
-  const dbDir = path.dirname(DB_PATH)
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true })
-  }
-} catch (e) {
-  console.warn("Failed to ensure DB directory exists:", e)
-}
-
-// Initialize database connection
-const db = new Database(DB_PATH)
-
-// Enable foreign keys
-db.pragma("foreign_keys = ON")
-
-// Initialize database schema if needed
-function initDatabase() {
-  try {
-    // Check if users table exists
-    const tableExists = db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
-      )
-      .get()
-
-    if (!tableExists) {
-      console.log("Initializing database schema...")
-      let schema = DEFAULT_SCHEMA_SQL
-      try {
-        if (fs.existsSync(SCHEMA_PATH)) {
-          schema = fs.readFileSync(SCHEMA_PATH, "utf-8")
-        } else {
-          console.warn("Schema file not found, using inline schema fallback")
-        }
-      } catch (readErr) {
-        console.warn("Failed to read schema file, using inline fallback:", readErr)
-      }
-      db.exec(schema)
-      console.log("Database schema initialized successfully")
-    }
-  } catch (error) {
-    console.error("Error initializing database:", error)
-    throw error
-  }
-}
-
-// Initialize on module load
-initDatabase()
-
-// Ensure tournaments schema exists even if users table already present
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS tournaments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      format TEXT NOT NULL DEFAULT 'swiss_fide_javafo',
-      points_win REAL NOT NULL DEFAULT 1.0,
-      points_loss REAL NOT NULL DEFAULT 0.0,
-      points_draw REAL NOT NULL DEFAULT 0.5,
-      bye_points REAL NOT NULL DEFAULT 0.0,
-      rounds INTEGER NOT NULL DEFAULT 5,
-      tiebreakers TEXT NOT NULL DEFAULT 'head_to_head, buchholz_cut1, buchholz',
-      team_mode TEXT NOT NULL DEFAULT 'none',
-      allow_join INTEGER NOT NULL DEFAULT 0,
-      allow_edit_results INTEGER NOT NULL DEFAULT 0,
-      allow_danger_changes INTEGER NOT NULL DEFAULT 0,
-      forbid_repeat_bye INTEGER NOT NULL DEFAULT 1,
-      late_join_points INTEGER NOT NULL DEFAULT 0,
-      hide_rating INTEGER NOT NULL DEFAULT 0,
-      hide_new_rating INTEGER NOT NULL DEFAULT 0,
-      compute_performance INTEGER NOT NULL DEFAULT 0,
-      hide_color_names INTEGER NOT NULL DEFAULT 0,
-      show_opponent_names INTEGER NOT NULL DEFAULT 1,
-      creator_telegram_id BIGINT,
-      archived INTEGER NOT NULL DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS tournament_participants (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      tournament_id INTEGER NOT NULL,
-      user_id INTEGER NOT NULL,
-      nickname TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(tournament_id, nickname),
-      FOREIGN KEY(tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS rounds (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      tournament_id INTEGER NOT NULL,
-      number INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'planned',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      paired_at DATETIME,
-      locked_at DATETIME,
-      UNIQUE(tournament_id, number),
-      FOREIGN KEY(tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS matches (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      round_id INTEGER NOT NULL,
-      white_participant_id INTEGER,
-      black_participant_id INTEGER,
-      board_no INTEGER,
-      result TEXT NOT NULL DEFAULT 'not_played',
-      score_white REAL NOT NULL DEFAULT 0,
-      score_black REAL NOT NULL DEFAULT 0,
-      source TEXT,
-      notes TEXT,
-      FOREIGN KEY(round_id) REFERENCES rounds(id) ON DELETE CASCADE,
-      FOREIGN KEY(white_participant_id) REFERENCES tournament_participants(id) ON DELETE SET NULL,
-      FOREIGN KEY(black_participant_id) REFERENCES tournament_participants(id) ON DELETE SET NULL
-    );
-  `)
-} catch (e) {
-  console.warn("Failed to ensure tournaments schema:", e)
-}
-
-// Ensure new column exists when upgrading existing DB
-try {
-  const cols = db.prepare("PRAGMA table_info(tournaments)").all() as Array<{ name: string }>
-  const hasCreator = cols.some(c => c.name === "creator_telegram_id")
-  if (!hasCreator) {
-    db.exec("ALTER TABLE tournaments ADD COLUMN creator_telegram_id BIGINT")
-  }
-} catch (e) {
-  console.warn("Failed to ensure creator_telegram_id column:", e)
-}
-
-// Ensure users.role column exists when upgrading existing DB
-try {
-  const ucols = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>
-  const hasRole = ucols.some(c => c.name === "role")
-  if (!hasRole) {
-    db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
-  }
-} catch (e) {
-  console.warn("Failed to ensure users.role column:", e)
-}
-
+// Types matching our database schema
 export interface User {
   id?: number
   telegram_id: number
@@ -301,7 +50,7 @@ export interface Tournament {
   compute_performance?: number
   hide_color_names?: number
   show_opponent_names?: number
-  creator_telegram_id?: number
+  creator_telegram_id?: number | null
   archived?: number
   created_at?: string
 }
@@ -314,7 +63,6 @@ export interface TournamentParticipant {
   created_at?: string
 }
 
-// Rounds and matches models
 export interface Round {
   id?: number
   tournament_id: number
@@ -338,82 +86,82 @@ export interface Match {
   notes?: string | null
 }
 
-// Get user by telegram_id
-export function getUserByTelegramId(telegramId: number): User | undefined {
-  const stmt = db.prepare("SELECT * FROM users WHERE telegram_id = ?")
-  return stmt.get(telegramId) as User | undefined
-}
+// ===== USER FUNCTIONS =====
 
-// Create new user
-export function createUser(user: User): User {
-  const stmt = db.prepare(`
-    INSERT INTO users (
-      telegram_id, username, first_name, last_name,
-      fide_rating, chesscom_rating, lichess_rating,
-      chesscom_url, lichess_url, bio, role
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `)
+export async function getUserByTelegramId(telegramId: number): Promise<User | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('telegram_id', telegramId)
+    .single()
 
-  const result = stmt.run(
-    user.telegram_id,
-    user.username || null,
-    user.first_name,
-    user.last_name,
-    user.fide_rating || null,
-    user.chesscom_rating || null,
-    user.lichess_rating || null,
-    user.chesscom_url || null,
-    user.lichess_url || null,
-    user.bio || null,
-    user.role || 'user'
-  )
-
-  return {
-    ...user,
-    id: result.lastInsertRowid as number,
+  if (error) {
+    if (error.code === 'PGRST116') return null // Not found
+    console.error('Error getting user by telegram_id:', error)
+    return null
   }
+
+  return data as User
 }
 
-// Update user profile
-export function updateUserProfile(
+export async function createUser(user: User): Promise<User | null> {
+  const { data, error} = await supabase
+    .from('users')
+    .insert({
+      telegram_id: user.telegram_id,
+      username: user.username || null,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      fide_rating: user.fide_rating || null,
+      chesscom_rating: user.chesscom_rating || null,
+      lichess_rating: user.lichess_rating || null,
+      chesscom_url: user.chesscom_url || null,
+      lichess_url: user.lichess_url || null,
+      bio: user.bio || null,
+      role: user.role || 'user'
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating user:', error)
+    return null
+  }
+
+  return data as User
+}
+
+export async function updateUserProfile(
   telegramId: number,
-  data: UserProfileData
-): boolean {
-  const stmt = db.prepare(`
-    UPDATE users SET
-      first_name = ?,
-      last_name = ?,
-      fide_rating = ?,
-      chesscom_rating = ?,
-      lichess_rating = ?,
-      chesscom_url = ?,
-      lichess_url = ?,
-      bio = ?,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE telegram_id = ?
-  `)
+  profileData: UserProfileData
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('users')
+    .update({
+      first_name: profileData.first_name,
+      last_name: profileData.last_name,
+      fide_rating: profileData.fide_rating || null,
+      chesscom_rating: profileData.chesscom_rating || null,
+      lichess_rating: profileData.lichess_rating || null,
+      chesscom_url: profileData.chesscom_url || null,
+      lichess_url: profileData.lichess_url || null,
+      bio: profileData.bio || null
+    })
+    .eq('telegram_id', telegramId)
 
-  const result = stmt.run(
-    data.first_name,
-    data.last_name,
-    data.fide_rating || null,
-    data.chesscom_rating || null,
-    data.lichess_rating || null,
-    data.chesscom_url || null,
-    data.lichess_url || null,
-    data.bio || null,
-    telegramId
-  )
+  if (error) {
+    console.error('Error updating user profile:', error)
+    return false
+  }
 
-  return result.changes > 0
+  return true
 }
 
-// Create or update user
-export function upsertUser(user: User): User {
-  const existingUser = getUserByTelegramId(user.telegram_id)
+export async function upsertUser(user: User): Promise<User | null> {
+  const existingUser = await getUserByTelegramId(user.telegram_id)
 
   if (existingUser) {
-    updateUserProfile(user.telegram_id, {
+    const updated = await updateUserProfile(user.telegram_id, {
       first_name: user.first_name,
       last_name: user.last_name,
       fide_rating: user.fide_rating,
@@ -421,318 +169,794 @@ export function upsertUser(user: User): User {
       lichess_rating: user.lichess_rating,
       chesscom_url: user.chesscom_url,
       lichess_url: user.lichess_url,
-      bio: user.bio,
+      bio: user.bio
     })
-    return getUserByTelegramId(user.telegram_id)!
+
+    if (updated) {
+      return await getUserByTelegramId(user.telegram_id)
+    }
+    return null
   } else {
-    return createUser(user)
+    return await createUser(user)
   }
 }
 
-export default db
+export async function getAllUsers(): Promise<User[]> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-// Additional helpers
-export function getAllUsers(): User[] {
-  const stmt = db.prepare("SELECT * FROM users ORDER BY created_at DESC")
-  return stmt.all() as User[]
+  if (error) {
+    console.error('Error getting all users:', error)
+    return []
+  }
+
+  return (data || []) as User[]
 }
 
-// Seed 20 test users with different roles
-export function seedTestUsers(count = 20): { inserted: number } {
-  const insert = db.prepare(`
-    INSERT OR IGNORE INTO users (
-      telegram_id, username, first_name, last_name,
-      fide_rating, chesscom_rating, lichess_rating,
-      chesscom_url, lichess_url, bio, role
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `)
+export async function searchUsersByUsernameFragment(fragment: string, limit = 8): Promise<User[]> {
+  const q = (fragment || '').trim()
+  if (!q) return []
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .ilike('username', `%${q}%`)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Error searching users by username fragment:', error)
+    return []
+  }
+
+  return (data || []) as User[]
+}
+
+export async function seedTestUsers(count = 20): Promise<{ inserted: number }> {
   let inserted = 0
   const baseId = 700000000
+
   for (let i = 1; i <= count; i++) {
     const role = i <= 5 ? 'admin' : i <= 10 ? 'moderator' : 'user'
     const tgId = baseId + i
-    const res = insert.run(
-      tgId,
-      `test${i}`,
-      `Тест${i}`,
-      `Пользователь${i}`,
-      null,
-      null,
-      null,
-      null,
-      null,
-      `Сидер ${i}`,
-      role
-    )
-    inserted += res.changes ? 1 : 0
+
+    const { error } = await supabase
+      .from('users')
+      .insert({
+        telegram_id: tgId,
+        username: `test${i}`,
+        first_name: `Тест${i}`,
+        last_name: `Пользователь${i}`,
+        fide_rating: null,
+        chesscom_rating: null,
+        lichess_rating: null,
+        chesscom_url: null,
+        lichess_url: null,
+        bio: `Сидер ${i}`,
+        role: role
+      })
+      .select()
+    if (error) {
+      console.error(`Seed user insert failed for tgId=${tgId}:`, error)
+    } else {
+      inserted++
+    }
   }
+
   return { inserted }
 }
 
-export function createTournament(t: Tournament): Tournament {
-  const stmt = db.prepare(`
-    INSERT INTO tournaments (
-      title, format, points_win, points_loss, points_draw, bye_points,
-      rounds, tiebreakers, team_mode,
-      allow_join, allow_edit_results, allow_danger_changes,
-      forbid_repeat_bye, late_join_points, hide_rating, hide_new_rating,
-      compute_performance, hide_color_names, show_opponent_names, creator_telegram_id, archived
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `)
+// ===== TOURNAMENT FUNCTIONS =====
 
-  const result = stmt.run(
-    t.title,
-    t.format,
-    t.points_win,
-    t.points_loss,
-    t.points_draw,
-    t.bye_points,
-    t.rounds,
-    t.tiebreakers,
-    t.team_mode,
-    t.allow_join ?? 0,
-    t.allow_edit_results ?? 0,
-    t.allow_danger_changes ?? 0,
-    t.forbid_repeat_bye ?? 1,
-    t.late_join_points ?? 0,
-    t.hide_rating ?? 0,
-    t.hide_new_rating ?? 0,
-    t.compute_performance ?? 0,
-    t.hide_color_names ?? 0,
-    t.show_opponent_names ?? 1,
-    t.creator_telegram_id ?? null,
-    t.archived ?? 0
-  )
+export async function createTournament(t: Tournament): Promise<Tournament | null> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .insert({
+      title: t.title,
+      format: t.format,
+      points_win: t.points_win,
+      points_loss: t.points_loss,
+      points_draw: t.points_draw,
+      bye_points: t.bye_points,
+      rounds: t.rounds,
+      tiebreakers: t.tiebreakers,
+      team_mode: t.team_mode,
+      allow_join: t.allow_join ?? 0,
+      allow_edit_results: t.allow_edit_results ?? 0,
+      allow_danger_changes: t.allow_danger_changes ?? 0,
+      forbid_repeat_bye: t.forbid_repeat_bye ?? 1,
+      late_join_points: t.late_join_points ?? 0,
+      hide_rating: t.hide_rating ?? 0,
+      hide_new_rating: t.hide_new_rating ?? 0,
+      compute_performance: t.compute_performance ?? 0,
+      hide_color_names: t.hide_color_names ?? 0,
+      show_opponent_names: t.show_opponent_names ?? 1,
+      creator_telegram_id: t.creator_telegram_id ?? null,
+      archived: t.archived ?? 0
+    })
+    .select()
+    .single()
 
-  return { ...t, id: result.lastInsertRowid as number }
-}
-
-export function listTournaments(): Tournament[] {
-  const stmt = db.prepare("SELECT * FROM tournaments ORDER BY created_at DESC")
-  return stmt.all() as Tournament[]
-}
-
-export function listTournamentsByCreator(telegramId: number): Tournament[] {
-  const stmt = db.prepare("SELECT * FROM tournaments WHERE creator_telegram_id = ? ORDER BY created_at DESC")
-  return stmt.all(telegramId) as Tournament[]
-}
-
-export function deleteTournament(id: number): boolean {
-  const res = db.prepare("DELETE FROM tournaments WHERE id = ?").run(id)
-  return (res.changes || 0) > 0
-}
-
-export function updateTournamentArchived(id: number, archived: number): boolean {
-  const res = db.prepare("UPDATE tournaments SET archived = ? WHERE id = ?").run(archived, id)
-  return (res.changes || 0) > 0
-}
-
-export function addTournamentParticipant(tp: TournamentParticipant): TournamentParticipant | null {
-  // Ensure the user exists
-  const user = db.prepare("SELECT id FROM users WHERE id = ?").get(tp.user_id) as { id?: number } | undefined
-  if (!user?.id) return null
-
-  const stmt = db.prepare(`
-    INSERT INTO tournament_participants (tournament_id, user_id, nickname)
-    VALUES (?, ?, ?)
-  `)
-  try {
-    const res = stmt.run(tp.tournament_id, tp.user_id, tp.nickname)
-    return { ...tp, id: res.lastInsertRowid as number }
-  } catch (e) {
-    console.error("Failed to add participant:", e)
+  if (error) {
+    console.error('Error creating tournament:', error)
     return null
   }
+
+  return data as Tournament
 }
 
-export function listTournamentParticipants(tournamentId: number): (TournamentParticipant & { user: User })[] {
-  const stmt = db.prepare(`
-    SELECT tp.*, u.* FROM tournament_participants tp
-    JOIN users u ON u.id = tp.user_id
-    WHERE tp.tournament_id = ?
-    ORDER BY tp.created_at ASC
-  `)
-  const rows = stmt.all(tournamentId) as Array<{
-    // tournament_participants (tp.*)
-    id: number
-    tournament_id: number
-    user_id: number
-    nickname: string
-    created_at: string
-    // users (u.*)
-    telegram_id: number
-    username: string | null
-    first_name: string
-    last_name: string
-    fide_rating: number | null
-    chesscom_rating: number | null
-    lichess_rating: number | null
-    chesscom_url: string | null
-    lichess_url: string | null
-    bio: string | null
-    updated_at: string
-  }>
-  return rows.map(r => ({
-    id: r.id,
-    tournament_id: r.tournament_id,
-    user_id: r.user_id,
-    nickname: r.nickname,
-    created_at: r.created_at,
-    user: {
-      id: r.user_id,
-      telegram_id: r.telegram_id,
-      username: r.username,
-      first_name: r.first_name,
-      last_name: r.last_name,
-      fide_rating: r.fide_rating,
-      chesscom_rating: r.chesscom_rating,
-      lichess_rating: r.lichess_rating,
-      chesscom_url: r.chesscom_url,
-      lichess_url: r.lichess_url,
-      bio: r.bio,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-    }
+export async function listTournaments(): Promise<Tournament[]> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error listing tournaments:', error)
+    return []
+  }
+
+  return data as Tournament[]
+}
+
+export async function listTournamentsByCreator(telegramId: number): Promise<Tournament[]> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .eq('creator_telegram_id', telegramId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error listing tournaments by creator:', error)
+    return []
+  }
+
+  return data as Tournament[]
+}
+
+export async function getTournamentById(id: number): Promise<Tournament | null> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    console.error('Error getting tournament by id:', error)
+    return null
+  }
+
+  return data as Tournament
+}
+
+export async function deleteTournament(id: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('tournaments')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error deleting tournament:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function updateTournamentArchived(id: number, archived: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('tournaments')
+    .update({ archived })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating tournament archived status:', error)
+    return false
+  }
+
+  return true
+}
+
+// ===== TOURNAMENT PARTICIPANTS =====
+
+export async function addTournamentParticipant(tp: TournamentParticipant): Promise<TournamentParticipant | null> {
+  // Ensure the user exists
+  const { data: user } = await supabase
+    .from('users')
+    .select('id')
+    .eq('id', tp.user_id)
+    .single()
+
+  if (!user) {
+    console.error('User not found')
+    return null
+  }
+
+  const { data, error } = await supabase
+    .from('tournament_participants')
+    .insert({
+      tournament_id: tp.tournament_id,
+      user_id: tp.user_id,
+      nickname: tp.nickname
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error adding tournament participant:', error)
+    return null
+  }
+
+  return data as TournamentParticipant
+}
+
+export async function listTournamentParticipants(tournamentId: number): Promise<Array<TournamentParticipant & { user: User }>> {
+  const { data, error } = await supabase
+    .from('tournament_participants')
+    .select(`
+      *,
+      user:users(*)
+    `)
+    .eq('tournament_id', tournamentId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error listing tournament participants:', error)
+    return []
+  }
+
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    tournament_id: row.tournament_id,
+    user_id: row.user_id,
+    nickname: row.nickname,
+    created_at: row.created_at,
+    user: row.user
   }))
 }
 
-// Rounds helpers
-export function getNextRoundNumber(tournamentId: number): number {
-  const row = db
-    .prepare("SELECT COALESCE(MAX(number), 0) AS maxnum FROM rounds WHERE tournament_id = ?")
-    .get(tournamentId) as { maxnum: number }
-  return (row?.maxnum || 0) + 1
-}
+// ===== ROUNDS =====
 
-export function createRound(tournamentId: number, number?: number): Round {
-  const num = number ?? getNextRoundNumber(tournamentId)
-  const stmt = db.prepare(`
-    INSERT INTO rounds (tournament_id, number, status)
-    VALUES (?, ?, 'planned')
-  `)
-  const res = stmt.run(tournamentId, num)
-  return { id: res.lastInsertRowid as number, tournament_id: tournamentId, number: num, status: 'planned' }
-}
+export async function getNextRoundNumber(tournamentId: number): Promise<number> {
+  const { data, error } = await supabase
+    .from('rounds')
+    .select('number')
+    .eq('tournament_id', tournamentId)
+    .order('number', { ascending: false })
+    .limit(1)
+    .single()
 
-export function listRounds(tournamentId: number): Round[] {
-  const stmt = db.prepare(`
-    SELECT * FROM rounds WHERE tournament_id = ? ORDER BY number ASC
-  `)
-  return stmt.all(tournamentId) as Round[]
-}
-
-export function listMatches(roundId: number): (Match & { white_nickname?: string|null, black_nickname?: string|null })[] {
-  const stmt = db.prepare(`
-    SELECT m.*, w.nickname AS white_nickname, b.nickname AS black_nickname
-    FROM matches m
-    LEFT JOIN tournament_participants w ON w.id = m.white_participant_id
-    LEFT JOIN tournament_participants b ON b.id = m.black_participant_id
-    WHERE m.round_id = ?
-    ORDER BY m.board_no ASC, m.id ASC
-  `)
-  return stmt.all(roundId) as Array<Match & { white_nickname?: string | null; black_nickname?: string | null }>
-}
-
-function getTournamentScoring(tournamentId: number) {
-  const row = db.prepare("SELECT points_win, points_loss, points_draw, bye_points FROM tournaments WHERE id = ?").get(tournamentId) as {
-    points_win: number; points_loss: number; points_draw: number; bye_points: number
-  } | undefined
-  return row || { points_win: 1, points_loss: 0, points_draw: 0.5, bye_points: 0 }
-}
-
-export function simpleSwissPairings(tournamentId: number, roundId: number): Match[] {
-  const participants = db.prepare(`
-    SELECT id FROM tournament_participants WHERE tournament_id = ? ORDER BY created_at ASC
-  `).all(tournamentId) as { id: number }[]
-
-  const matches: Match[] = []
-  const scoring = getTournamentScoring(tournamentId)
-
-  const ids = participants.map(p => p.id)
-  let board = 1
-
-  // bye if odd
-  let byeId: number | null = null
-  if (ids.length % 2 === 1) {
-    byeId = ids.pop() || null
+  if (error || !data) {
+    return 1
   }
 
+  return (data.number || 0) + 1
+}
+
+export async function createRound(tournamentId: number, number?: number): Promise<Round | null> {
+  const num = number ?? await getNextRoundNumber(tournamentId)
+
+  const { data, error } = await supabase
+    .from('rounds')
+    .insert({
+      tournament_id: tournamentId,
+      number: num,
+      status: 'planned'
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating round:', error)
+    return null
+  }
+
+  return data as Round
+}
+
+export async function listRounds(tournamentId: number): Promise<Round[]> {
+  const { data, error } = await supabase
+    .from('rounds')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .order('number', { ascending: true })
+
+  if (error) {
+    console.error('Error listing rounds:', error)
+    return []
+  }
+
+  return data as Round[]
+}
+
+// ===== MATCHES =====
+
+export async function listMatches(roundId: number): Promise<Array<Match & { white_nickname?: string | null; black_nickname?: string | null }>> {
+  const { data, error } = await supabase
+    .from('matches')
+    .select(`
+      *,
+      white:tournament_participants!white_participant_id(nickname),
+      black:tournament_participants!black_participant_id(nickname)
+    `)
+    .eq('round_id', roundId)
+    .order('board_no', { ascending: true })
+
+  if (error) {
+    console.error('Error listing matches:', error)
+    return []
+  }
+
+  return data.map((row: any) => ({
+    ...row,
+    white_nickname: row.white?.nickname || null,
+    black_nickname: row.black?.nickname || null
+  }))
+}
+
+async function getTournamentScoring(tournamentId: number) {
+  const tournament = await getTournamentById(tournamentId)
+  return tournament || { points_win: 1, points_loss: 0, points_draw: 0.5, bye_points: 0 }
+}
+
+export async function simpleSwissPairings(tournamentId: number, roundId: number): Promise<Match[]> {
+  // Determine current round number
+  const { data: roundRow } = await supabase
+    .from('rounds')
+    .select('number')
+    .eq('id', roundId)
+    .single()
+
+  const currentRoundNum = (roundRow as any)?.number ?? 1
+
+  // Get tournament config for scoring and bye rules
+  const tournament = await getTournamentById(tournamentId)
+  const scoring = await getTournamentScoring(tournamentId)
+  const forbidRepeatBye = tournament?.forbid_repeat_bye ? 1 : 0
+
+  // Determine ordering of participants
+  let ids: number[] = []
+  if (currentRoundNum <= 1) {
+    // First round: by registration order
+    const { data: participants } = await supabase
+      .from('tournament_participants')
+      .select('id')
+      .eq('tournament_id', tournamentId)
+      .order('created_at', { ascending: true })
+    if (!participants || participants.length === 0) return []
+    ids = participants.map(p => p.id)
+  } else {
+    // Subsequent rounds: order by standings (points desc, then nickname)
+    const standings = await getStandings(tournamentId)
+    if (!standings || standings.length === 0) return []
+    ids = standings.map(s => s.participant_id)
+  }
+
+  // Compute who already received a bye in previous rounds
+  let hadBye = new Set<number>()
+  if (currentRoundNum > 1) {
+    const prevRounds = await listRounds(tournamentId)
+    const prevIds = (prevRounds || [])
+      .filter(r => (r.number || 0) < currentRoundNum)
+      .map(r => r.id!)
+    for (const rid of prevIds) {
+      const prevMatches = await listMatches(rid)
+      for (const m of prevMatches) {
+        // Treat matches with missing black participant as bye, regardless of result label
+        if ((m.black_participant_id === null || m.result === 'bye') && m.white_participant_id) {
+          hadBye.add(m.white_participant_id)
+        }
+      }
+    }
+  }
+
+  const matches: Match[] = []
+  let board = 1
+
+  // Bye handling if odd number of participants
+  let byeId: number | null = null
+  if (ids.length % 2 === 1) {
+    // Prefer a player without previous bye (if forbidRepeatBye enabled)
+    if (forbidRepeatBye) {
+      for (let i = ids.length - 1; i >= 0; i--) {
+        const candidate = ids[i]
+        if (!hadBye.has(candidate)) {
+          byeId = candidate
+          ids.splice(i, 1)
+          break
+        }
+      }
+    }
+    // If none found (or forbidRepeatBye disabled), take the last one
+    if (byeId === null) {
+      byeId = ids.pop() || null
+    }
+  }
+
+  // Pair remaining players sequentially
   for (let i = 0; i < ids.length; i += 2) {
     const w = ids[i]
     const b = ids[i + 1]
-    const res = db.prepare(`
-      INSERT INTO matches (round_id, white_participant_id, black_participant_id, board_no, result, score_white, score_black, source)
-      VALUES (?, ?, ?, ?, 'not_played', 0, 0, 'system')
-    `).run(roundId, w, b, board)
-    matches.push({ id: res.lastInsertRowid as number, round_id: roundId, white_participant_id: w, black_participant_id: b, board_no: board, result: 'not_played', score_white: 0, score_black: 0, source: 'system' })
+
+    const { data } = await supabase
+      .from('matches')
+      .insert({
+        round_id: roundId,
+        white_participant_id: w,
+        black_participant_id: b,
+        board_no: board,
+        result: 'not_played',
+        score_white: 0,
+        score_black: 0,
+        source: 'system'
+      })
+      .select()
+      .single()
+
+    if (data) {
+      matches.push(data as Match)
+    }
     board += 1
   }
 
+  // Add bye if needed: automatically assign a win to the player with a bye
   if (byeId) {
-    const res = db.prepare(`
-      INSERT INTO matches (round_id, white_participant_id, black_participant_id, board_no, result, score_white, score_black, source)
-      VALUES (?, ?, NULL, ?, 'bye', ?, 0, 'system')
-    `).run(roundId, byeId, board, scoring.bye_points)
-    matches.push({ id: res.lastInsertRowid as number, round_id: roundId, white_participant_id: byeId, black_participant_id: null, board_no: board, result: 'bye', score_white: scoring.bye_points, score_black: 0, source: 'system' })
+    const { data } = await supabase
+      .from('matches')
+      .insert({
+        round_id: roundId,
+        white_participant_id: byeId,
+        black_participant_id: null,
+        board_no: board,
+        result: 'bye',
+        score_white: scoring.bye_points,
+        score_black: 0,
+        source: 'system'
+      })
+      .select()
+      .single()
+
+    if (data) {
+      matches.push(data as Match)
+    }
   }
 
-  db.prepare(`UPDATE rounds SET status = 'paired', paired_at = CURRENT_TIMESTAMP WHERE id = ?`).run(roundId)
+  // Update round status
+  await supabase
+    .from('rounds')
+    .update({ status: 'paired', paired_at: new Date().toISOString() })
+    .eq('id', roundId)
+
   return matches
 }
 
-export function updateMatchResult(matchId: number, result: string): Match | null {
-  const row = db.prepare(`
-    SELECT m.id, m.round_id, r.tournament_id FROM matches m
-    JOIN rounds r ON r.id = m.round_id
-    WHERE m.id = ?
-  `).get(matchId) as { id: number, round_id: number, tournament_id: number } | undefined
-  if (!row) return null
+export async function updateMatchResult(matchId: number, result: string): Promise<Match | null> {
+  // Get match and tournament info
+  const { data: match } = await supabase
+    .from('matches')
+    .select('id, round_id, rounds!inner(tournament_id)')
+    .eq('id', matchId)
+    .single()
 
-  const scoring = getTournamentScoring(row.tournament_id)
+  if (!match) {
+    console.error('Match not found')
+    return null
+  }
+
+  const tournamentId = (match as any).rounds.tournament_id
+  const scoring = await getTournamentScoring(tournamentId)
+
   let sw = 0, sb = 0
   switch (result) {
     case 'white':
     case 'forfeit_black':
-      sw = scoring.points_win; sb = scoring.points_loss; break
+      sw = scoring.points_win
+      sb = scoring.points_loss
+      break
     case 'black':
     case 'forfeit_white':
-      sw = scoring.points_loss; sb = scoring.points_win; break
+      sw = scoring.points_loss
+      sb = scoring.points_win
+      break
     case 'draw':
-      sw = scoring.points_draw; sb = scoring.points_draw; break
+      sw = scoring.points_draw
+      sb = scoring.points_draw
+      break
     case 'bye':
-      sw = scoring.bye_points; sb = 0; break
+      sw = scoring.bye_points
+      sb = 0
+      break
     default:
-      result = 'not_played'; sw = 0; sb = 0
+      result = 'not_played'
+      sw = 0
+      sb = 0
   }
 
-  db.prepare(`UPDATE matches SET result = ?, score_white = ?, score_black = ? WHERE id = ?`).run(result, sw, sb, matchId)
-  const updated = db.prepare(`SELECT * FROM matches WHERE id = ?`).get(matchId) as Match
-  return updated
+  const { data, error } = await supabase
+    .from('matches')
+    .update({
+      result,
+      score_white: sw,
+      score_black: sb
+    })
+    .eq('id', matchId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating match result:', error)
+    return null
+  }
+
+  // After updating the result, check if the round has all matches finished
+  try {
+    const roundId = (match as any).round_id as number
+    if (Number.isFinite(roundId)) {
+      const { data: roundMatches } = await supabase
+        .from('matches')
+        .select('id, result')
+        .eq('round_id', roundId)
+
+      const allFinished = (roundMatches || []).length > 0 && (roundMatches || []).every((m: any) => m.result && m.result !== 'not_played')
+      if (allFinished) {
+        // Lock the round
+        await supabase
+          .from('rounds')
+          .update({ status: 'locked', locked_at: new Date().toISOString() })
+          .eq('id', roundId)
+
+        // Trigger finalization check based on locked rounds
+        const tournamentId = (match as any).rounds.tournament_id as number
+        if (Number.isFinite(tournamentId)) {
+          try {
+            await finalizeTournamentIfExceeded(tournamentId)
+          } catch (fErr) {
+            console.error('Finalization after round lock failed:', fErr)
+          }
+        }
+      }
+    }
+  } catch (postErr) {
+    console.error('Post-update round lock check failed:', postErr)
+  }
+
+  return data as Match
 }
 
-// Standings helpers
-export function getTournamentById(id: number): Tournament | undefined {
-  const row = db.prepare("SELECT * FROM tournaments WHERE id = ?").get(id) as Tournament | undefined
-  return row
+// ===== STANDINGS =====
+
+export async function getStandings(tournamentId: number): Promise<Array<{ participant_id: number; nickname: string; points: number }>> {
+  const participants = await listTournamentParticipants(tournamentId)
+  const rounds = await listRounds(tournamentId)
+
+  const standings = await Promise.all(
+    participants.map(async (p) => {
+      let points = 0
+
+      for (const round of rounds) {
+        const matches = await listMatches(round.id!)
+
+        for (const match of matches) {
+          if (match.white_participant_id === p.id) {
+            points += match.score_white
+          } else if (match.black_participant_id === p.id) {
+            points += match.score_black
+          }
+        }
+      }
+
+      return {
+        participant_id: p.id!,
+        nickname: p.nickname,
+        points
+      }
+    })
+  )
+
+  standings.sort((a, b) => {
+    if (b.points !== a.points) {
+      return b.points - a.points
+    }
+    return a.nickname.localeCompare(b.nickname)
+  })
+
+  return standings
 }
 
-export function getStandings(tournamentId: number): { participant_id: number; nickname: string; points: number }[] {
-  const stmt = db.prepare(`
-    SELECT tp.id AS participant_id, tp.nickname,
-           COALESCE(SUM(
-             CASE
-               WHEN m.white_participant_id = tp.id THEN m.score_white
-               WHEN m.black_participant_id = tp.id THEN m.score_black
-               ELSE 0
-             END
-           ), 0) AS points
-    FROM tournament_participants tp
-    LEFT JOIN matches m ON m.white_participant_id = tp.id OR m.black_participant_id = tp.id
-    LEFT JOIN rounds r ON r.id = m.round_id
-    WHERE tp.tournament_id = ? AND (r.tournament_id = tp.tournament_id OR r.id IS NULL)
-    GROUP BY tp.id, tp.nickname
-    ORDER BY points DESC, tp.nickname ASC
-  `)
-  const rows = stmt.all(tournamentId) as { participant_id: number; nickname: string; points: number }[]
-  return rows
+// ===== AUTO-FINALIZATION =====
+// Finish tournament when played rounds exceed planned total and snapshot standings.
+export async function finalizeTournamentIfExceeded(tournamentId: number): Promise<boolean> {
+  const tournament = await getTournamentById(tournamentId)
+  if (!tournament) return false
+  if ((tournament.archived ?? 0) === 1) return false
+
+  const planned = tournament.rounds || 0
+
+  const { data: rounds, error: rErr } = await supabase
+    .from('rounds')
+    .select('id, number, status')
+    .eq('tournament_id', tournamentId)
+    .order('number', { ascending: true })
+
+  if (rErr) {
+    console.error('Failed to list rounds for finalization:', rErr)
+    return false
+  }
+
+  // Finalize when the number of locked (completed) rounds is at least planned total
+  const lockedCount = (rounds || []).filter((r: any) => r.status === 'locked').length
+  if (lockedCount >= planned) {
+    const standings = await getStandings(tournamentId)
+    const rows = standings.map((s, idx) => ({
+      tournament_id: tournamentId,
+      participant_id: s.participant_id,
+      nickname: s.nickname,
+      points: s.points,
+      rank: idx + 1
+    }))
+
+    // If there are no participants/standings, skip leaderboard snapshot gracefully
+    if (rows.length > 0) {
+      const { error: lbErr } = await supabase
+        .from('leaderboard')
+        .upsert(rows, { onConflict: 'tournament_id,participant_id' })
+        .select()
+
+      if (lbErr) {
+        console.error('Failed to insert leaderboard snapshot:', lbErr)
+        // Proceed without leaderboard snapshot (e.g., table missing). We'll still archive.
+      }
+    } else {
+      console.warn('No standings to snapshot; finalizing without leaderboard entries')
+    }
+
+    const archivedOk = await updateTournamentArchived(tournamentId, 1)
+    if (!archivedOk) {
+      console.error('Failed to mark tournament archived after finalization')
+      return false
+    }
+
+    return true
+  }
+
+  return false
 }
+
+// ===== MANUAL FINALIZATION =====
+// Finish tournament explicitly and snapshot standings to leaderboard regardless of round locks.
+export async function finalizeTournament(tournamentId: number): Promise<boolean> {
+  const tournament = await getTournamentById(tournamentId)
+  if (!tournament) return false
+
+  // Compute current standings
+  const standings = await getStandings(tournamentId)
+  const rows = standings.map((s, idx) => ({
+    tournament_id: tournamentId,
+    participant_id: s.participant_id,
+    nickname: s.nickname,
+    points: s.points,
+    rank: idx + 1
+  }))
+
+  // If there are no participants/standings, skip leaderboard snapshot gracefully
+  if (rows.length > 0) {
+    const { error: lbErr } = await supabase
+      .from('leaderboard')
+      .upsert(rows, { onConflict: 'tournament_id,participant_id' })
+      .select()
+
+    if (lbErr) {
+      console.error('Failed to insert leaderboard snapshot (manual):', lbErr)
+      // Proceed without leaderboard snapshot (e.g., table missing). We'll still archive.
+    }
+  } else {
+    console.warn('No standings to snapshot; manual finalization will archive without leaderboard entries')
+  }
+
+  const archivedOk = await updateTournamentArchived(tournamentId, 1)
+  if (!archivedOk) {
+    console.error('Failed to mark tournament archived after manual finalization')
+    return false
+  }
+
+  return true
+}
+
+// ===== LEADERBOARD =====
+export async function listLeaderboard(tournamentId: number): Promise<Array<{ participant_id: number; nickname: string; points: number; rank: number }>> {
+  const { data, error } = await supabase
+    .from('leaderboard')
+    .select('participant_id, nickname, points, rank')
+    .eq('tournament_id', tournamentId)
+    .order('rank', { ascending: true })
+
+  if (error) {
+    console.error('Error listing leaderboard:', error)
+    return []
+  }
+
+  return (data || []) as Array<{ participant_id: number; nickname: string; points: number; rank: number }>
+}
+
+// ===== ADMIN MAINTENANCE =====
+
+export async function deleteAllRoundsForTournament(tournamentId: number): Promise<boolean> {
+  try {
+    // Get all round IDs for the tournament
+    const { data: rounds, error: roundsErr } = await supabase
+      .from('rounds')
+      .select('id')
+      .eq('tournament_id', tournamentId)
+
+    if (roundsErr) {
+      console.error('Error fetching rounds to delete:', roundsErr)
+      return false
+    }
+
+    const roundIds = (rounds || []).map(r => r.id)
+
+    // Delete matches first to satisfy FK constraints (though ON DELETE CASCADE exists, be explicit)
+    if (roundIds.length > 0) {
+      const { error: matchesErr } = await supabase
+        .from('matches')
+        .delete()
+        .in('round_id', roundIds)
+      if (matchesErr) {
+        console.error('Error deleting matches:', matchesErr)
+        return false
+      }
+    }
+
+    // Delete rounds for the tournament
+    const { error: delRoundsErr } = await supabase
+      .from('rounds')
+      .delete()
+      .eq('tournament_id', tournamentId)
+
+    if (delRoundsErr) {
+      console.error('Error deleting rounds:', delRoundsErr)
+      return false
+    }
+
+    return true
+  } catch (e) {
+    console.error('Failed to delete all rounds for tournament:', e)
+    return false
+  }
+}
+
+// Удаление конкретного тура и всех его матчей
+export async function deleteRoundById(roundId: number): Promise<boolean> {
+  try {
+    // Удаляем матчи этого тура
+    const { error: matchesErr } = await supabase
+      .from('matches')
+      .delete()
+      .eq('round_id', roundId)
+
+    if (matchesErr) {
+      console.error('Error deleting matches for round:', matchesErr)
+      return false
+    }
+
+    // Удаляем сам тур
+    const { error: roundErr } = await supabase
+      .from('rounds')
+      .delete()
+      .eq('id', roundId)
+
+    if (roundErr) {
+      console.error('Error deleting round:', roundErr)
+      return false
+    }
+
+    return true
+  } catch (e) {
+    console.error('Failed to delete round by id:', e)
+    return false
+  }
+}
+
+export default supabase

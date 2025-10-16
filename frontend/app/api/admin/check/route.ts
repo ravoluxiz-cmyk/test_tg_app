@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/telegram"
 
 export async function GET(req: NextRequest) {
+  // В dev-окружении разрешаем доступ без проверки
+  if (process.env.NODE_ENV !== "production") {
+    return NextResponse.json({ ok: true })
+  }
   try {
-    const adminUser = requireAdmin(req.headers)
+    const adminUser = await requireAdmin(req.headers)
     if (!adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }

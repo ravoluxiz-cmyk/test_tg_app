@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ImageResponse } from "next/og"
 import { requireAdmin } from "@/lib/telegram"
-import { simpleSwissPairings, getStandings, getTournamentById, listTournamentParticipants } from "@/lib/db"
+import { simpleSwissPairings, getStandings, getTournamentById, listTournamentParticipants, listMatches, finalizeTournamentIfExceeded } from "@/lib/db"
 import React, { Fragment } from "react"
 
 export async function POST(
@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string; tourId: string }> }
 ) {
   try {
-    const telegramUser = requireAdmin(req.headers)
+    const telegramUser = await requireAdmin(req.headers)
     if (!telegramUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
@@ -19,13 +19,13 @@ export async function POST(
     if (!Number.isFinite(tournamentId) || !Number.isFinite(tourId)) {
       return NextResponse.json({ error: "Некорректные параметры" }, { status: 400 })
     }
-    const matches = simpleSwissPairings(tournamentId, tourId)
+    const matches = await simpleSwissPairings(tournamentId, tourId)
 
     // Generate standings screenshot and send to Telegram
     try {
-      const tournament = getTournamentById(tournamentId)
-      const standings = getStandings(tournamentId)
-      const participants = listTournamentParticipants(tournamentId)
+      const tournament = await getTournamentById(tournamentId)
+      const standings = await getStandings(tournamentId)
+      const participants = await listTournamentParticipants(tournamentId)
       const participantsCount = participants.length
 
       const title = `Турнир: ${tournament?.title || "Без названия"}`
@@ -125,7 +125,16 @@ export async function POST(
       console.error("Screenshot generation/send failed:", shotErr)
     }
 
-    return NextResponse.json(matches, { status: 201 })
+    // Auto-finish if played rounds exceed planned and snapshot leaderboard
+    try {
+      await finalizeTournamentIfExceeded(tournamentId)
+    } catch (fErr) {
+      console.error("Finalization after pairings failed:", fErr)
+    }
+
+    // Return enriched matches including nicknames
+    const enriched = await listMatches(tourId)
+    return NextResponse.json(enriched, { status: 201 })
   } catch (e) {
     console.error("Failed to generate pairings:", e)
     return NextResponse.json({ error: "Внутренняя ошибка" }, { status: 500 })

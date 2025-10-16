@@ -4,7 +4,7 @@ import { createTournament, listTournaments, type Tournament } from "@/lib/db"
 
 export async function GET() {
   try {
-    const tournaments = listTournaments()
+    const tournaments = await listTournaments()
     return NextResponse.json(tournaments)
   } catch (e) {
     console.error("Failed to list tournaments:", e)
@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const adminUser = requireAdmin(request.headers)
+    const adminUser = await requireAdmin(request.headers)
     if (!adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
@@ -48,8 +48,11 @@ export async function POST(request: NextRequest) {
       archived: body.archived ?? 0,
     }
 
-    const created = createTournament(tournament)
-    return NextResponse.json(created, { status: 201 })
+  const created = await createTournament(tournament)
+  if (!created) {
+    return NextResponse.json({ error: "Не удалось создать турнир" }, { status: 400 })
+  }
+  return NextResponse.json(created, { status: 201 })
   } catch (e) {
     console.error("Failed to create tournament:", e)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
