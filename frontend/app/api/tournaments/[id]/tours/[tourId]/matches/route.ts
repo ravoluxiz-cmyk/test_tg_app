@@ -4,14 +4,15 @@ import { listMatches, updateMatchResult } from "@/lib/db"
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string; tourId: string } }
+  ctx: { params: Promise<{ id: string; tourId: string }> }
 ) {
   try {
-    const tourId = Number(params.tourId)
-    if (!Number.isFinite(tourId)) {
+    const { tourId } = await ctx.params
+    const tourIdNum = Number(tourId)
+    if (!Number.isFinite(tourIdNum)) {
       return NextResponse.json({ error: "Некорректный тур" }, { status: 400 })
     }
-    const matches = await listMatches(tourId)
+    const matches = await listMatches(tourIdNum)
     return NextResponse.json(matches)
   } catch (e) {
     console.error("Failed to list matches:", e)

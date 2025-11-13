@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import ChessBackground from "@/components/ChessBackground"
 import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
-import { ArrowLeft, List, CalendarDays, Archive, ArchiveRestore, Trash2 } from "lucide-react"
+import { ArrowLeft, List, CalendarDays, Archive, ArchiveRestore, Trash2, ListOrdered } from "lucide-react"
 
 type DbTournament = {
   id: number
@@ -132,6 +132,15 @@ export default function AdminAllTournamentsPage() {
                     >
                       Открыть
                     </button>
+                    {Number(t.archived) === 1 && (
+                      <button
+                        onClick={() => router.push(`/admin/tournaments/${t.id}/results`)}
+                        className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg border border-white/10 w-full sm:w-auto"
+                        title="Перейти к таблице результатов"
+                      >
+                        <ListOrdered className="w-4 h-4" /> Результаты
+                      </button>
+                    )}
                     {Number(t.archived) === 0 ? (
                       <button
                         onClick={() => handleArchiveToggle(t, true)}

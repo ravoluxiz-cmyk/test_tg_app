@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user from database
-    let user = getUserByTelegramId(telegramUser.id)
+    let user = await getUserByTelegramId(telegramUser.id)
 
     if (!user) {
       // Auto-create profile with Telegram data
       console.log(`Auto-creating profile for Telegram user ${telegramUser.id}`)
-      user = createUser({
+      user = await createUser({
         telegram_id: telegramUser.id,
         username: telegramUser.username,
         first_name: telegramUser.first_name,
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const existingUser = getUserByTelegramId(telegramUser.id)
+    const existingUser = await getUserByTelegramId(telegramUser.id)
     if (existingUser) {
       return NextResponse.json(
         { error: "User already exists" },
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user
-    const newUser = createUser({
+    const newUser = await createUser({
       telegram_id: telegramUser.id,
       username: telegramUser.username,
       first_name,
@@ -163,14 +163,14 @@ export async function PUT(request: NextRequest) {
       bio: bio || null,
     }
 
-    const updated = updateUserProfile(telegramUser.id, profileData)
+    const updated = await updateUserProfile(telegramUser.id, profileData)
 
     if (!updated) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
     // Get updated user
-    const updatedUser = getUserByTelegramId(telegramUser.id)
+    const updatedUser = await getUserByTelegramId(telegramUser.id)
 
     return NextResponse.json({ user: updatedUser })
   } catch (error) {

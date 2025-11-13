@@ -150,8 +150,8 @@ export default function ProfileEditPage() {
         throw new Error(errorData.error || "Failed to save profile")
       }
 
-      // Success - redirect to profile
-      router.push("/profile")
+      // Success - redirect to profile (with success flag)
+      router.push("/profile?saved=1")
     } catch (err) {
       console.error("Error saving profile:", err)
       setError(

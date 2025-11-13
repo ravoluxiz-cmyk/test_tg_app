@@ -20,6 +20,13 @@ type Match = {
   black_nickname?: string | null
 }
 
+type LeaderRow = {
+  participant_id: number
+  nickname: string
+  points: number
+  rank: number
+}
+
 export default function TourManagePage() {
   const params = useParams<{ id: string; tourId: string }>()
   const tournamentId = Number(params.id)
@@ -35,7 +42,11 @@ export default function TourManagePage() {
   const [saving, setSaving] = useState<number | null>(null)
   const [roundNumber, setRoundNumber] = useState<number | null>(null)
   const [tournamentMeta, setTournamentMeta] = useState<{ rounds: number; archived: number } | null>(null)
-  const [tours, setTours] = useState<Array<{ id: number; number: number; status: string; created_at: string }>>([])
+
+  // Лидерборд (онлайн таблица очков)
+  const [leaderboard, setLeaderboard] = useState<LeaderRow[]>([])
+  const [lbLoading, setLbLoading] = useState<boolean>(false)
+  const [lbError, setLbError] = useState<string | null>(null)
 
   const loadMatches = useCallback(async () => {
     setLoading(true)
@@ -67,8 +78,7 @@ export default function TourManagePage() {
       if (!toursRes.ok) return
       const rounds = await toursRes.json()
       if (Array.isArray(rounds)) {
-        setTours(rounds)
-        const current = rounds.find((r: any) => r.id === tourId)
+        const current = (rounds as Array<{ id: number; number?: number }>).find((r) => r.id === tourId)
         if (current && typeof current.number === 'number') {
           setRoundNumber(current.number)
         }
@@ -77,7 +87,7 @@ export default function TourManagePage() {
         const t = await tournamentRes.json()
         setTournamentMeta(t && typeof t === 'object' ? { rounds: Number(t.rounds || 0), archived: Number(t.archived || 0) } : null)
       }
-    } catch (_) {}
+    } catch {}
   }, [tournamentId, tourId])
 
   useEffect(() => {
@@ -97,11 +107,20 @@ export default function TourManagePage() {
         },
       })
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || "Не удалось сгенерировать пары")
+        let msg = "Не удалось сгенерировать пары"
+        try {
+          const err = await res.json()
+          if (err && typeof err.error === 'string') msg = err.error
+        } catch {}
+        if (res.status === 502) {
+          msg = "BBP недоступен или вернул пустой результат. Проверьте BBP_PAIRINGS_BIN в .env.local, путь к бинарю и логи сервера."
+        }
+        throw new Error(msg)
       }
       const data = await res.json()
       setMatches(Array.isArray(data) ? data : [])
+      // После генерации пар обновим лидерборд (на случай байев и т.д.)
+      await loadLeaderboard()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Неизвестная ошибка")
     } finally {
@@ -145,8 +164,15 @@ export default function TourManagePage() {
         },
       })
       if (!pairRes.ok) {
-        const err = await pairRes.json().catch(() => ({}))
-        throw new Error(err.error || "Не удалось сгенерировать пары для следующего тура")
+        let msg = "Не удалось сгенерировать пары для следующего тура"
+        try {
+          const err = await pairRes.json()
+          if (err && typeof err.error === 'string') msg = err.error
+        } catch {}
+        if (pairRes.status === 502) {
+          msg = "BBP недоступен или вернул пустой результат. Проверьте BBP_PAIRINGS_BIN в .env.local, путь к бинарю и логи сервера."
+        }
+        throw new Error(msg)
       }
 
       router.push(`/admin/tournaments/${tournamentId}/tours/${newTour.id}`)
@@ -175,12 +201,43 @@ export default function TourManagePage() {
       }
       const updated = await res.json()
       setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, ...updated } : m)))
+      // После сохранения результата — перезагрузим лидерборд для актуализации очков
+      await loadLeaderboard()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Неизвестная ошибка")
     } finally {
       setSaving(null)
     }
   }
+
+  // Загрузка лидерборда турнира (динамические standings, если снапшот отсутствует)
+  const loadLeaderboard = useCallback(async () => {
+    if (!Number.isFinite(tournamentId)) return
+    setLbLoading(true)
+    setLbError(null)
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/leaderboard`)
+      if (!res.ok) throw new Error("Не удалось загрузить лидерборд")
+      const rows = await res.json()
+      setLeaderboard(Array.isArray(rows) ? rows : [])
+    } catch (e) {
+      setLbError(e instanceof Error ? e.message : "Неизвестная ошибка")
+    } finally {
+      setLbLoading(false)
+    }
+  }, [tournamentId])
+
+  useEffect(() => {
+    loadLeaderboard()
+  }, [loadLeaderboard])
+
+  // Автообновление лидерборда раз в 10 секунд
+  useEffect(() => {
+    const id = setInterval(() => {
+      loadLeaderboard()
+    }, 10000)
+    return () => clearInterval(id)
+  }, [loadLeaderboard])
 
   // Результаты выбираются через удобный выпадающий список ResultSelect
 
@@ -221,7 +278,8 @@ export default function TourManagePage() {
               <span className="font-semibold">Назад</span>
             </button>
           </div>
-          <h1 className="text-4xl font-black text-white mb-6">Управление туром №{roundNumber ?? '…'}</h1>
+          <h1 className="text-4xl font-black text-white mb-2">Управление туром №{roundNumber ?? '…'}</h1>
+          <div className="text-white/70 mb-6">Следите за лидербордом в реальном времени и обновляйте результаты на этой странице.</div>
 
           {error && (
             <div className="bg-red-500/20 border border-red-500 text-white rounded-lg p-4 mb-6">{error}</div>
@@ -268,6 +326,50 @@ export default function TourManagePage() {
             {(tournamentMeta?.rounds ?? 0) > 0 && ((roundNumber ?? 0) + 1 > (tournamentMeta?.rounds ?? 0)) && (
               <div className="text-white/70">Достигнут лимит туров ({tournamentMeta?.rounds ?? 0})</div>
             )}
+          </div>
+
+          {/* Блок лидерборда */}
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-2xl font-bold text-white">Лидерборд турнира</h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={loadLeaderboard}
+                  className="bg-white/10 text-white px-3 py-2 rounded hover:bg-white/20"
+                >
+                  Обновить таблицу
+                </button>
+                {lbLoading && <span className="text-white/60 text-sm">Обновление…</span>}
+              </div>
+            </div>
+            {lbError && (
+              <div className="bg-red-500/20 border border-red-500 text-white rounded-lg p-3 mb-3">{lbError}</div>
+            )}
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-white">
+                <thead>
+                  <tr className="bg-white/10">
+                    <th className="text-left p-3">Место</th>
+                    <th className="text-left p-3">Участник</th>
+                    <th className="text-left p-3">Очки</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((row) => (
+                    <tr key={row.participant_id} className="border-t border-white/10">
+                      <td className="p-3">#{row.rank}</td>
+                      <td className="p-3">{row.nickname}</td>
+                      <td className="p-3 font-semibold">{row.points}</td>
+                    </tr>
+                  ))}
+                  {!lbLoading && leaderboard.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="p-3 text-white/70">Ещё нет данных для таблицы. Добавьте участников и/или результаты.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Mobile cards */}

@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "bbp:smoke": "node scripts/bbp-smoke.js",
+    "bbp:integration": "node scripts/bbp-integration.js"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",

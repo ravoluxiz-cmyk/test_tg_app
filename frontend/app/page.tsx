@@ -58,7 +58,13 @@ export default function Home() {
                   onClick={async () => {
                     try {
                       if (!initData) {
-                        alert("Откройте приложение через Telegram, чтобы продолжить")
+                        // Dev fallback: allow admin page if /api/admin/check returns OK without Authorization
+                        const resp = await fetch("/api/admin/check")
+                        if (resp.ok) {
+                          router.push("/admin")
+                        } else {
+                          alert("Откройте приложение через Telegram, чтобы продолжить")
+                        }
                         return
                       }
                       const resp = await fetch("/api/admin/check", {
@@ -91,7 +97,7 @@ export default function Home() {
           <div className="flex flex-col w-full max-w-xs sm:max-w-md md:max-w-2xl gap-4 px-4">
             <HoverButton
               className="flex items-center justify-center gap-3"
-              disabled
+              onClick={() => router.push('/merch')}
             >
               <ShoppingBag className="w-7 h-7 text-white flex-shrink-0" />
               <span className="text-xl sm:text-2xl text-white font-black uppercase tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
@@ -111,7 +117,7 @@ export default function Home() {
 
             <HoverButton
               className="flex items-center justify-center gap-3"
-              disabled
+              onClick={() => router.push('/lessons')}
             >
               <GraduationCap className="w-7 h-7 text-white flex-shrink-0" />
               <span className="text-xl sm:text-2xl text-white font-black uppercase tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>

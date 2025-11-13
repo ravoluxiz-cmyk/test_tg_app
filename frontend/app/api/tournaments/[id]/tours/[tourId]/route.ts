@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase"
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; tourId: string } }
+  ctx: { params: Promise<{ id: string; tourId: string }> }
 ) {
   try {
     const telegramUser = await requireAdmin(req.headers)
@@ -13,8 +13,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const tournamentId = Number(params.id)
-    const tourId = Number(params.tourId)
+    const resolved = await ctx.params
+    const tournamentId = Number(resolved.id)
+    const tourId = Number(resolved.tourId)
     if (!Number.isFinite(tournamentId) || !Number.isFinite(tourId)) {
       return NextResponse.json({ error: "Некорректные параметры" }, { status: 400 })
     }

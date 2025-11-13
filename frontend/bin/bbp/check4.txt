@@ -1,0 +1,16 @@
+
+ID	Pts	-	Pref	C2	C12	C14	  Cur		
+
+ 1	0.0	 	  A 	 Y	   	   	 (6W)		
+ 2	0.0	 	  A 	 Y	   	   	 (7B)		
+ 3	0.0	 	  A 	 Y	   	   	 (8W)		
+ 4	0.0	 	  A 	 Y	   	   	 (9B)		
+ 5	0.0	 	  A 	 Y	   	   	(10W)		
+ 6	0.0	 	  A 	 Y	   	   	 (1B)		
+ 7	0.0	 	  A 	 Y	   	   	 (2W)		
+ 8	0.0	 	  A 	 Y	   	   	 (3B)		
+ 9	0.0	 	  A 	 Y	   	   	 (4W)		
+10	0.0	 	  A 	 Y	   	   	 (5B)		
+
+
+BBP Pairings (https://github.com/BieremaBoyzProgramming/bbpPairings) - VERSION_INFO (Built Oct 17 2025 13:52:57)

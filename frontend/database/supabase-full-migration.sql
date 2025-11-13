@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
 CREATE TABLE IF NOT EXISTS tournaments (
   id BIGSERIAL PRIMARY KEY,
   title TEXT NOT NULL,
-  format TEXT NOT NULL DEFAULT 'swiss_fide_javafo',
+  format TEXT NOT NULL DEFAULT 'swiss_bbp_dutch',
   points_win REAL NOT NULL DEFAULT 1.0,
   points_loss REAL NOT NULL DEFAULT 0.0,
   points_draw REAL NOT NULL DEFAULT 0.5,
@@ -227,9 +227,9 @@ ON CONFLICT (telegram_id) DO NOTHING;
 -- Tournaments data
 INSERT INTO tournaments (title, format, points_win, points_loss, points_draw, bye_points, rounds, tiebreakers, team_mode, allow_join, allow_edit_results, allow_danger_changes, forbid_repeat_bye, late_join_points, hide_rating, hide_new_rating, compute_performance, hide_color_names, show_opponent_names, archived, creator_telegram_id, created_at)
 VALUES
-  ('My Tournament', 'swiss_fide_javafo', 1.0, 0.0, 0.5, 0.0, 5, 'head_to_head, buchholz_cut1, buchholz', 'none', 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, NULL, '2025-10-12 12:58:22'),
-  ('Test Tournament', 'swiss_fide_javafo', 1.0, 0.0, 0.5, 0.0, 5, 'head_to_head, buchholz_cut1, buchholz', 'none', 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, NULL, '2025-10-12 13:12:29'),
-  ('My Tournament', 'swiss_fide_javafo', 1.0, 0.0, 0.5, 0.0, 5, 'head_to_head, buchholz_cut1, buchholz', 'none', 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, NULL, '2025-10-12 13:13:00');
+  ('My Tournament', 'swiss_bbp_dutch', 1.0, 0.0, 0.5, 0.0, 5, 'head_to_head, buchholz_cut1, buchholz', 'none', 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, NULL, '2025-10-12 12:58:22'),
+  ('Test Tournament', 'swiss_bbp_dutch', 1.0, 0.0, 0.5, 0.0, 5, 'head_to_head, buchholz_cut1, buchholz', 'none', 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, NULL, '2025-10-12 13:12:29'),
+  ('My Tournament', 'swiss_bbp_dutch', 1.0, 0.0, 0.5, 0.0, 5, 'head_to_head, buchholz_cut1, buchholz', 'none', 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, NULL, '2025-10-12 13:13:00');
 
 -- Tournament participants data
 INSERT INTO tournament_participants (tournament_id, user_id, nickname, created_at)

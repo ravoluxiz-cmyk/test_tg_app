@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const tournament: Tournament = {
       title: body.title,
-      format: body.format || "swiss_fide_javafo",
+      format: body.format || "swiss_bbp_dutch",
       points_win: body.points_win ?? 1,
       points_loss: body.points_loss ?? 0,
       points_draw: body.points_draw ?? 0.5,

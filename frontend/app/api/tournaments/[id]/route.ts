@@ -2,13 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/telegram"
 import { deleteTournament, getTournamentById, updateTournamentArchived } from "@/lib/db"
 
-interface Params {
-  params: { id: string }
-}
-
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await ctx.params
     const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Некорректный ID турнира" }, { status: 400 })
@@ -26,14 +22,14 @@ export async function GET(_request: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const adminUser = await requireAdmin(request.headers)
     if (!adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const { id } = params
+    const { id } = await ctx.params
     const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Некорректный ID турнира" }, { status: 400 })
@@ -55,14 +51,14 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const adminUser = await requireAdmin(request.headers)
     if (!adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const { id } = params
+    const { id } = await ctx.params
     const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Некорректный ID турнира" }, { status: 400 })

@@ -1,0 +1,591 @@
+[
+  {
+    "id": "TC001",
+    "title": "Telegram Web App Authentication with Valid InitData",
+    "description": "Verify Telegram Web App authentication succeeds when valid initData with correct HMAC signature is provided in production environment.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Launch the web app in production mode via Telegram Web App with valid initData and correct HMAC signature."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify authentication is successful and user session is established."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify admin privileges are assigned correctly if user is an admin."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Telegram Web App Authentication with Invalid InitData",
+    "description": "Verify Telegram Web App authentication fails when invalid or tampered initData is provided in production environment.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Launch the web app in production via Telegram Web App with invalid or modified initData or incorrect HMAC signature."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify authentication is rejected and user is shown an error or login failure message."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Telegram Web App Dev Fallback Authentication",
+    "description": "Verify Telegram authentication fallback works correctly in development mode without valid HMAC.",
+    "category": "security",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Launch the web app in development environment without valid Telegram initData."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify fallback authentication grants access for development."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Admin Route Access Control Enforcement",
+    "description": "Verify admin routes are accessible only to authenticated admins and access is denied otherwise.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to access an admin API route or UI page as unauthenticated user."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied (403 Forbidden or redirect)."
+      },
+      {
+        "type": "action",
+        "description": "Authenticate as a non-admin user and attempt to access admin route."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied."
+      },
+      {
+        "type": "action",
+        "description": "Authenticate as an admin user and access admin route."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is granted."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Tournament Creation with Valid Data",
+    "description": "Verify an admin can create a tournament with all required fields and valid data.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate as admin and navigate to tournament creation UI."
+      },
+      {
+        "type": "action",
+        "description": "Fill in valid tournament details including format, scoring rules, planned rounds, and tiebreaker options."
+      },
+      {
+        "type": "action",
+        "description": "Submit the creation form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify tournament is created and appears in tournament listing."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Tournament Creation Missing Required Fields",
+    "description": "Verify tournament creation fails if required fields are missing or invalid.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate as admin and open tournament creation UI."
+      },
+      {
+        "type": "action",
+        "description": "Leave required fields empty or provide invalid formats."
+      },
+      {
+        "type": "action",
+        "description": "Submit the creation form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify error messages appear for missing/invalid fields and tournament is not created."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Participant Addition with Existing User",
+    "description": "Verify admin can add an existing user as a participant to a tournament successfully.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate as admin and open participants management UI for a tournament."
+      },
+      {
+        "type": "action",
+        "description": "Search for an existing valid username."
+      },
+      {
+        "type": "action",
+        "description": "Add the user as participant."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify participant is added and appears in the participant list."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Participant Addition with Non-Existent User",
+    "description": "Verify participant addition fails when username does not exist.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate as admin and open participants management UI."
+      },
+      {
+        "type": "action",
+        "description": "Search for a non-existent username."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify search returns no results."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to add non-existent user as participant."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error is shown and participant is not added."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Round Creation and Deletion With Admin Authorization",
+    "description": "Verify admin can create and delete rounds (tours) within tournament constraints.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate as admin and open rounds management UI for a tournament."
+      },
+      {
+        "type": "action",
+        "description": "Create a new round with valid parameters."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify new round appears in the round list."
+      },
+      {
+        "type": "action",
+        "description": "Delete an existing round."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify round is removed from the list."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Round Creation Exceeding Planned Number of Rounds",
+    "description": "Verify creation of rounds beyond planned number is prevented and proper error is given.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to create a round exceeding the tournament’s planned rounds count."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify error message is shown and round creation is not allowed."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Pairings Generation Using BBP Pairings Dutch Variant",
+    "description": "Verify pairings for a round are generated correctly using BBP Pairings Dutch variant algorithm without repeat byes or illegal matches.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "For a tournament with participants and a created round, trigger pairing generation using BBP Dutch variant."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify pairings are generated according to Swiss system rules compliant with Dutch variant."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify persisted matches for the round have source=\"bbp\"."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no repeat byes or illegal matchups occur."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Pairings Generation Using BBP Pairings Burstein Variant",
+    "description": "Verify pairings for a round are generated correctly using BBP Pairings Burstein variant algorithm without repeat byes or illegal matches.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger pairing generation for a round using BBP Burstein variant."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify valid Swiss pairings per Burstein rules."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify persisted matches for the round have source=\"bbp\"."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no repeated byes and illegal matches."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Pairings Generation: BBP Unavailable or Empty Result (502 Handling)",
+    "description": "Verify that when BBP Pairings is unavailable or returns an empty result, the UI shows a 502-specific message and no fallback to built-in Swiss is performed.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate BBP Pairings failure (e.g., invalid BBP_PAIRINGS_BIN path or mock 502 from /pairings API)."
+      },
+      {
+        "type": "action",
+        "description": "Trigger pairing generation."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI shows: \"BBP недоступен или вернул пустой результат. Проверьте BBP_PAIRINGS_BIN в .env.local, путь к бинарю и логи сервера.\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that pairings are not generated and the user can retry later from the tour page."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Match Result Update with Authenticated User",
+    "description": "Verify authenticated user can update match results correctly, and updates reflect in database and UI.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate a user authorized for the match."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to match detail page and submit valid result updates (win/loss/draw)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify match results update successfully in backend."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify standings and leaderboard update accordingly."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Match Result Update with Unauthorized User",
+    "description": "Verify updating match results fails if user is not authenticated or not authorized for the match.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to update match result without authentication."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify update is rejected with authentication error."
+      },
+      {
+        "type": "action",
+        "description": "Authenticate as a user with no rights on the match and attempt result update."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify update is rejected due to lack of permissions."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Automatic Tournament Finalization After Planned Rounds Completion",
+    "description": "Verify tournaments automatically finalize when all planned rounds are completed and final leaderboard snapshot is created and archived.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Complete all planned rounds with results for a tournament."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify tournament auto-finalizes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify leaderboard snapshot is generated and archived."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify tournament status reflects finalization."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Manual Tournament Finalization by Admin",
+    "description": "Verify admin can manually finalize a tournament at any time.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate as admin and open tournament management UI."
+      },
+      {
+        "type": "action",
+        "description": "Trigger manual tournament finalization."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify tournament finalizes and leaderboard snapshot is archived."
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Google Calendar Integration Fetch and Display Upcoming Tournaments",
+    "description": "Verify Google Calendar integration fetches upcoming tournament events correctly and displays them in calendar view.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Fetch calendar feed from Google Calendar API."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify only upcoming tournaments are returned and displayed."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify event details match tournament metadata."
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Google Calendar Integration Handles Empty or Malformed Data",
+    "description": "Verify system handles empty, malformed or invalid Google Calendar data gracefully without crashing.",
+    "category": "error handling",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate empty or malformed calendar data from Google Calendar API."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI handles the condition gracefully with appropriate user message or fallback UI."
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Admin UI Tournament Creation Form Persistence",
+    "description": "Verify tournament creation form drafts are saved in localStorage and restored correctly after page reload or navigation.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Start filling in tournament creation form without submitting."
+      },
+      {
+        "type": "action",
+        "description": "Reload the page or navigate away and return."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify form data is restored from localStorage correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Chess Themed UI Responsiveness and Accessibility",
+    "description": "Verify that the UI is fully responsive on various devices and screen sizes and complies with accessibility standards.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the web app on desktop, tablet, and mobile screen sizes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI layout adjusts correctly with no overlap or clipping."
+      },
+      {
+        "type": "action",
+        "description": "Test UI with screen reader and keyboard navigation."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI elements are accessible, with proper ARIA labels and tab order."
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Telegram Bot Commands /start and /profile Link to Web App",
+    "description": "Verify Telegram bot commands /start and /profile function correctly and link users to appropriate web application pages.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send /start command to Telegram bot."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify bot responds with welcome message and link to web app main page."
+      },
+      {
+        "type": "action",
+        "description": "Send /profile command to Telegram bot."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify bot responds with profile info or link to user profile page in web app."
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "User Profile Displays FIDE, Chess.com, Lichess Ratings",
+    "description": "Verify user profile pages show integrated chess ratings from FIDE, Chess.com, and Lichess correctly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a user profile page."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify displayed ratings match data fetched from integrated chess services."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI handles missing or unavailable rating data gracefully."
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Supabase Client Initialization with Environment Variables",
+    "description": "Verify Supabase client initializes correctly when environment variables are set, and falls back to in-memory MemStore when variables are missing.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Run the app with all required Supabase environment variables."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Supabase client initializes and connects to the database."
+      },
+      {
+        "type": "action",
+        "description": "Run the app with missing Supabase environment variables."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify fallback to in-memory MemStore client and basic CRUD operations work."
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "API Endpoint User Search by Username Fragment",
+    "description": "Verify the user search API returns correct results for given username fragments.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Call user search API with a valid substring."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the response contains matching usernames."
+      },
+      {
+        "type": "action",
+        "description": "Call user search API with substring matching no users."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response is empty array or no matches found."
+      }
+    ]
+  }
+]

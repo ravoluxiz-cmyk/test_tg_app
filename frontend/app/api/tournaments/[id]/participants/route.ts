@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { addTournamentParticipant, listTournamentParticipants } from "@/lib/db"
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await ctx.params
     const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 })
@@ -16,9 +16,9 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await ctx.params
     const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 })

@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "loginUser": "ravoluxiz@gmail.com",
+  "loginPassword": "50Vjybnjhjd",
+  "executionArgs": {
+    "projectName": "frontend",
+    "projectPath": "/Users/dmitry/test_tg_app-1/frontend",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-YjTss47RFS082S3TEDuySjU4ZRP1fGaLNx9BF74Lwp2_9-t5_nmXYhkAXw2KmZ6q9Dw84doNp2aDtC8LgwGV6i_WN54kONfnuFKlA_z3UO_KsSsmi31JCAuJLgW-10e1bAo"
+    }
+  },
+  "proxy": "http://7d365c66-075d-4db8-b929-42bc288cc865:duv2wr8hg6UZLXCCIIF9d7nNdLdFkuaA@tun.testsprite.com:8080"
+}

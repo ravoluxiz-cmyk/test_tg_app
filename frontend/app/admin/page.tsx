@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import ChessBackground from "@/components/ChessBackground"
 import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
-import { Shield, PlusCircle, ListOrdered, Trash2, Archive, ArrowLeft, List } from "lucide-react"
+import { Shield, PlusCircle, Trash2, Archive, ArrowLeft, List } from "lucide-react"
 
 export default function AdminMainMenuPage() {
   const router = useRouter()
@@ -16,8 +16,16 @@ export default function AdminMainMenuPage() {
     const checkAdmin = async () => {
       try {
         if (!initData) {
-          setAuthorized(false)
-          setError("Откройте приложение через Telegram")
+          // Dev fallback: try admin check without Authorization
+          try {
+            const resp = await fetch("/api/admin/check")
+            setAuthorized(resp.ok)
+            if (!resp.ok) setError("Откройте приложение через Telegram")
+          } catch (e) {
+            console.error("Admin check (dev fallback) failed", e)
+            setAuthorized(false)
+            setError("Откройте приложение через Telegram")
+          }
           return
         }
         const resp = await fetch("/api/admin/check", {

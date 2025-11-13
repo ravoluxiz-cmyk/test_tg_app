@@ -172,6 +172,15 @@ export default function AdminMyTournamentsPage() {
                     >
                       Открыть
                     </button>
+                    {Number(t.archived) === 1 && (
+                      <button
+                        onClick={() => router.push(`/admin/tournaments/${t.id}/results`)}
+                        className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg border border-white/10"
+                        title="Перейти к таблице результатов"
+                      >
+                        <ListOrdered className="w-4 h-4" /> Результаты
+                      </button>
+                    )}
                     {Number(t.archived) === 0 ? (
                       <button
                         onClick={() => handleArchiveToggle(t, true)}

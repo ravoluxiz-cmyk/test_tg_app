@@ -4,14 +4,15 @@ import { listMatches, updateMatchResult } from "@/lib/db"
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string; roundId: string } }
+  ctx: { params: Promise<{ id: string; roundId: string }> }
 ) {
   try {
-    const roundId = Number(params.roundId)
-    if (!Number.isFinite(roundId)) {
+    const { roundId } = await ctx.params
+    const roundIdNum = Number(roundId)
+    if (!Number.isFinite(roundIdNum)) {
       return NextResponse.json({ error: "Некорректный раунд" }, { status: 400 })
     }
-    const matches = await listMatches(roundId)
+    const matches = await listMatches(roundIdNum)
     return NextResponse.json(matches)
   } catch (e) {
     console.error("Failed to list matches:", e)

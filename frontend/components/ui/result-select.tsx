@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 
 type ResultOption = {
   value: string
@@ -33,36 +34,61 @@ export function ResultSelect({
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
-  const [openUp, setOpenUp] = useState(false)
 
   const current = useMemo(() => RESULT_OPTIONS.find((o) => o.value === value) || RESULT_OPTIONS[0], [value])
   const options = useMemo(() => RESULT_OPTIONS.filter((o) => allowBye || o.value !== "bye"), [allowBye])
 
+  // Позиционирование портала относительно кнопки
+  const [position, setPosition] = useState<{
+    left: number
+    top: number
+    width: number
+    openUp: boolean
+    maxHeight: number
+  } | null>(null)
+
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!rootRef.current) return
-      if (e.target instanceof Node && rootRef.current.contains(e.target)) return
+      const target = e.target as Node
+      // Не закрываем, если клик внутри кнопки или внутри портального дропдауна
+      if (rootRef.current.contains(target)) return
+      if (dropdownRef.current && dropdownRef.current.contains(target)) return
       setOpen(false)
     }
     document.addEventListener("mousedown", onDocClick)
     return () => document.removeEventListener("mousedown", onDocClick)
   }, [])
 
-  // Decide whether to open the dropdown above or below based on viewport space
   useEffect(() => {
-    if (!open) return
-    const measure = () => {
+    if (!open) {
+      setPosition(null)
+      return
+    }
+
+    const compute = () => {
       const rect = rootRef.current?.getBoundingClientRect()
       if (!rect) return
-      const actualHeight = dropdownRef.current?.offsetHeight
       const estimatedHeight = options.length * 36 + 8 // ~item height + margin
-      const height = actualHeight || estimatedHeight
       const spaceBelow = window.innerHeight - rect.bottom
-      setOpenUp(spaceBelow < height)
+      const spaceAbove = rect.top
+      let openUp = false
+      // Выбираем сторону с большим свободным местом, если вниз не хватает
+      if (spaceBelow < estimatedHeight) openUp = spaceAbove > spaceBelow
+      // Максимальная высота в выбранной стороне, чтобы не выходить за окно
+      const maxHeight = Math.max(0, (openUp ? spaceAbove : spaceBelow) - 8)
+      setPosition({ left: rect.left, top: openUp ? rect.top : rect.bottom, width: rect.width, openUp, maxHeight })
     }
-    const id = requestAnimationFrame(measure)
-    return () => cancelAnimationFrame(id)
-    // options.length impacts estimated height
+
+    compute()
+    const onScrollOrResize = () => compute()
+    window.addEventListener("scroll", onScrollOrResize, true)
+    window.addEventListener("resize", onScrollOrResize)
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize, true)
+      window.removeEventListener("resize", onScrollOrResize)
+    }
+    // options.length влияет на оценку высоты
   }, [open, options.length])
 
   return (
@@ -81,13 +107,18 @@ export function ResultSelect({
         </span>
         <span className="text-white/60">▼</span>
       </button>
-      {open && (
+      {open && position && createPortal(
         <div
           role="listbox"
           ref={dropdownRef}
-          className={`absolute left-0 right-0 z-20 rounded-lg border border-white/10 bg-slate-900 shadow-lg overflow-hidden ${
-            openUp ? "bottom-full mb-1" : "top-full mt-1"
-          }`}
+          className={`fixed z-50 rounded-lg border border-white/10 bg-slate-900 shadow-lg overflow-auto`}
+          style={{
+            left: position.left,
+            width: position.width,
+            top: position.openUp ? position.top - 8 : position.top + 8,
+            transform: position.openUp ? 'translateY(-100%)' : 'none',
+            maxHeight: position.maxHeight,
+          }}
         >
           {options.map((o) => (
             <button
@@ -105,7 +136,8 @@ export function ResultSelect({
               <span className={o.labelClass}>{o.label}</span>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -190,11 +190,29 @@ export async function isAdmin(user: TelegramUser | null): Promise<boolean> {
  * Require admin from request headers. Returns user if admin, otherwise null.
  */
 export async function requireAdmin(headers: Headers): Promise<TelegramUser | null> {
+  // In development, optionally enforce strict admin based on TESTSTRICT flag
+  const isDev = process.env.NODE_ENV !== 'production'
+  const testStrict = String(process.env.TESTSTRICT || '').toLowerCase()
+  const enforceStrictInDev = isDev && (testStrict === '1' || testStrict === 'true' || testStrict === 'yes')
+
+  if (isDev && !enforceStrictInDev) {
+    const user = getTelegramUserFromHeaders(headers)
+    return (
+      user || {
+        id: 0,
+        first_name: 'Dev',
+        last_name: 'Admin',
+        username: 'dev_admin',
+        photo_url: '',
+        auth_date: Math.floor(Date.now() / 1000),
+        hash: ''
+      }
+    )
+  }
+
+  // Production or strict dev: strict admin check
   const user = getTelegramUserFromHeaders(headers)
   if (!user) return null
-  if (process.env.NODE_ENV !== 'production') {
-    return user
-  }
   const userIsAdmin = await isAdmin(user)
   return userIsAdmin ? user : null
 }

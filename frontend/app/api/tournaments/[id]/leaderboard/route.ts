@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { listLeaderboard, getStandings } from "@/lib/db"
 
-interface Params {
-  params: { id: string }
-}
-
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const tournamentId = Number(params.id)
+    const { id } = await ctx.params
+    const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
       return NextResponse.json({ error: "Некорректный ID турнира" }, { status: 400 })
     }

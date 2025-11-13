@@ -10,7 +10,7 @@ export default function AdminCreateTournamentPage() {
   const router = useRouter()
   const { initData } = useTelegramWebApp()
   const [title, setTitle] = useState("My Tournament")
-  const [format, setFormat] = useState("swiss_fide_javafo")
+  const [format, setFormat] = useState("swiss_bbp_dutch")
   const [pointsWin, setPointsWin] = useState(1)
   const [pointsLoss, setPointsLoss] = useState(0)
   const [pointsDraw, setPointsDraw] = useState(0.5)
@@ -63,7 +63,7 @@ export default function AdminCreateTournamentPage() {
           if (d.archived !== undefined) setArchived(Boolean(d.archived))
         }
       }
-    } catch (e) {
+    } catch {
       // ignore restore errors
     }
   }, [])
@@ -94,7 +94,7 @@ export default function AdminCreateTournamentPage() {
       if (typeof window !== "undefined") {
         localStorage.setItem("tournament_draft", JSON.stringify(draft))
       }
-    } catch (e) {
+    } catch {
       // ignore save errors
     }
   }
@@ -136,7 +136,7 @@ export default function AdminCreateTournamentPage() {
         localStorage.removeItem("tournament_draft")
       }
       setInfo("Черновик очищен")
-    } catch (e) {
+    } catch {
       // ignore errors
     }
   }
@@ -258,7 +258,9 @@ export default function AdminCreateTournamentPage() {
                 onChange={(e) => setFormat(e.target.value)}
                 className="w-full bg-white/10 text-white p-3 rounded-lg outline-none"
               >
-                <option value="swiss_fide_javafo">Швейцарская система по правилам ФИДЕ (движок JaVaFo)</option>
+                <option value="swiss_bbp_dutch">Швейцарская система (BBP Dutch)</option>
+                <option value="swiss_bbp_burstein">Швейцарская система (BBP Burstein)</option>
+                
               </select>
             </div>
 

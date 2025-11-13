@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Seed test users into SQLite with safe defaults.
 // Usage:
 //   node frontend/scripts/seed-users.js --db=/absolute/path/to/repchess.db [--count=20] [--base-id=700000000]

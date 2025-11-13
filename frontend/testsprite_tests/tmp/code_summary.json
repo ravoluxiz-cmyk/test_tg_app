@@ -1,0 +1,85 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "Next.js 15 (App Router), React 19",
+    "Supabase (PostgreSQL) via @supabase/supabase-js",
+    "Tailwind CSS v4, Turbopack, Framer Motion, Radix UI, Telegram Web App SDK, Google APIs, BBP Pairings (native or mock)"
+  ],
+  "features": [
+    {
+      "name": "Home page and admin gate",
+      "description": "Landing page with 4 main actions and an admin access gate on the letter 'E'. Dev fallback allows admin navigation without Telegram initData.",
+      "files": ["app/page.tsx", "components/ChessBackground.tsx", "hooks/useTelegramWebApp.ts"]
+    },
+    {
+      "name": "Public tournaments schedule",
+      "description": "Displays upcoming tournaments parsed from Google Calendar.",
+      "files": ["app/tournaments/page.tsx", "components/tournaments/tournament-card.tsx", "lib/google-calendar/client.ts", "lib/google-calendar/parser.ts", "app/api/tournaments/calendar/route.ts"]
+    },
+    {
+      "name": "Profile view & edit",
+      "description": "View and edit user profile with ratings and bio, saved via /api/profile endpoints.",
+      "files": ["app/profile/page.tsx", "app/profile/edit/page.tsx", "app/api/profile/route.ts", "lib/db.ts", "lib/supabase.ts"]
+    },
+    {
+      "name": "Admin main menu",
+      "description": "Admin dashboard with navigation to create tournaments, unified list, delete, and archive. Includes dev auth fallback.",
+      "files": ["app/admin/page.tsx", "app/api/admin/check/route.ts"]
+    },
+    {
+      "name": "Unified tournaments management",
+      "description": "Admin list of tournaments with actions to archive/unarchive, delete, and navigate to details.",
+      "files": ["app/admin/tournaments/page.tsx", "app/api/tournaments/route.ts", "app/api/tournaments/mine/route.ts", "app/api/tournaments/[id]/route.ts"]
+    },
+    {
+      "name": "Create tournament form",
+      "description": "Rich form to create tournaments (format, points, rounds, options). Supports draft save/restore via localStorage.",
+      "files": ["app/admin/tournaments/new/page.tsx", "app/api/tournaments/route.ts", "lib/db.ts"]
+    },
+    {
+      "name": "Participants management",
+      "description": "Add participants via user search (Telegram username), set nicknames, seed test users in dev, and start new rounds.",
+      "files": ["app/admin/tournaments/[id]/participants/page.tsx", "app/api/tournaments/[id]/participants/route.ts", "app/api/dev/seed-users/route.ts", "app/api/users/route.ts", "app/api/users/search/route.ts", "app/api/user/search/route.ts"]
+    },
+    {
+      "name": "Tours (rounds) management",
+      "description": "Create tours and manage pairing generation, view and delete tours, open last tour.",
+      "files": ["app/admin/tournaments/[id]/tours/page.tsx", "app/api/tournaments/[id]/tours/route.ts", "lib/db.ts"]
+    },
+    {
+      "name": "Tour detail: pairings & results",
+      "description": "View pairings (mobile/desktop views), generate pairings using BBP only, submit match results, finalize tournament when rounds limit reached. If BBP is unavailable or returns an empty result, show a 502-specific message and allow retry later.",
+      "files": ["app/admin/tournaments/[id]/tours/[tourId]/page.tsx", "app/api/tournaments/[id]/tours/[tourId]/pairings/route.tsx", "app/api/tournaments/[id]/tours/[tourId]/matches/route.ts", "app/api/match/submit/route.ts", "lib/bbp.ts", "lib/db.ts"]
+    },
+    {
+      "name": "Tournament finalize & leaderboard",
+      "description": "Finalize tournaments and snapshot leaderboard.",
+      "files": ["app/api/tournaments/[id]/finalize/route.ts", "app/api/tournaments/[id]/leaderboard/route.ts", "lib/db.ts"]
+    },
+    {
+      "name": "Telegram Web App authentication",
+      "description": "Parse and validate Telegram initData (strict in prod, relaxed in dev).",
+      "files": ["lib/telegram.ts", "hooks/useTelegramWebApp.ts", "app/api/auth/telegram/route.ts", "app/layout.tsx"]
+    },
+    {
+      "name": "Supabase database access",
+      "description": "Service role access for server operations; functions to manage users, tournaments, rounds, matches, standings, and finalization.",
+      "files": ["lib/supabase.ts", "lib/db.ts", "app/api/debug/supabase/route.ts"]
+    },
+    {
+      "name": "BBP Pairings integration",
+      "description": "Generate TRF(bx), run BBP Pairings binary (configurable via BBP_PAIRINGS_BIN), parse output. BBP-only mode: no fallback to built-in Swiss; errors are surfaced to the UI (e.g., 502) for diagnosis and retry.",
+      "files": ["lib/bbp.ts", "bin/bbp-mock.js", "scripts/bbp-smoke.js", "scripts/bbp-integration.js"]
+    },
+    {
+      "name": "UI components",
+      "description": "Reused UI building blocks for the app.",
+      "files": ["components/ui/hover-button.tsx", "components/ui/back-button.tsx", "components/ui/result-select.tsx"]
+    },
+    {
+      "name": "Utilities",
+      "description": "Misc helpers for formatting, time, etc.",
+      "files": ["lib/utils.ts"]
+    }
+  ]
+}

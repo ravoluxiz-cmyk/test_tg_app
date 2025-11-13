@@ -407,13 +407,22 @@ export async function listTournamentParticipants(tournamentId: number): Promise<
     return []
   }
 
-  return (data || []).map((row: any) => ({
+  const rows = (data || []) as Array<{
+    id: number
+    tournament_id: number
+    user_id: number
+    nickname: string
+    created_at: string
+    user?: User
+  }>
+
+  return rows.map((row) => ({
     id: row.id,
     tournament_id: row.tournament_id,
     user_id: row.user_id,
     nickname: row.nickname,
     created_at: row.created_at,
-    user: row.user
+    user: (row.user as User) || ({} as User)
   }))
 }
 
@@ -489,7 +498,14 @@ export async function listMatches(roundId: number): Promise<Array<Match & { whit
     return []
   }
 
-  return data.map((row: any) => ({
+  const rows = (data || []) as Array<
+    Match & {
+      white?: { nickname?: string | null } | null
+      black?: { nickname?: string | null } | null
+    }
+  >
+
+  return rows.map((row) => ({
     ...row,
     white_nickname: row.white?.nickname || null,
     black_nickname: row.black?.nickname || null
@@ -509,33 +525,59 @@ export async function simpleSwissPairings(tournamentId: number, roundId: number)
     .eq('id', roundId)
     .single()
 
-  const currentRoundNum = (roundRow as any)?.number ?? 1
+  const currentRoundNum = typeof roundRow?.number === 'number' ? roundRow.number : 1
 
   // Get tournament config for scoring and bye rules
   const tournament = await getTournamentById(tournamentId)
   const scoring = await getTournamentScoring(tournamentId)
   const forbidRepeatBye = tournament?.forbid_repeat_bye ? 1 : 0
 
-  // Determine ordering of participants
+  // Determine ordering of participants (rating-aware)
   let ids: number[] = []
+
+  // Build rating map for tournament participants
+  const participantsExt = await listTournamentParticipants(tournamentId)
+  if (!participantsExt || participantsExt.length === 0) return []
+
+  const effectiveRating = (u: User | undefined) => {
+    if (!u) return 0
+    const r = u.fide_rating ?? u.chesscom_rating ?? u.lichess_rating ?? 0
+    return typeof r === 'number' ? r : 0
+  }
+
+  const ratingMap = new Map<number, number>()
+  for (const p of participantsExt) {
+    if (p.id) ratingMap.set(p.id, effectiveRating(p.user))
+  }
+
   if (currentRoundNum <= 1) {
-    // First round: by registration order
-    const { data: participants } = await supabase
-      .from('tournament_participants')
-      .select('id')
-      .eq('tournament_id', tournamentId)
-      .order('created_at', { ascending: true })
-    if (!participants || participants.length === 0) return []
-    ids = participants.map(p => p.id)
+    // First round: sort by rating (ascending) so adjacent players have close ratings
+    const sortedByRating = [...participantsExt].sort((a, b) => effectiveRating(a.user) - effectiveRating(b.user))
+    ids = sortedByRating.map((p) => p.id!)
   } else {
-    // Subsequent rounds: order by standings (points desc, then nickname)
+    // Subsequent rounds: group by points and sort within each group by rating to pair close ratings
     const standings = await getStandings(tournamentId)
     if (!standings || standings.length === 0) return []
-    ids = standings.map(s => s.participant_id)
+
+    const groups = new Map<number, number[]>()
+    for (const s of standings) {
+      const arr = groups.get(s.points) || []
+      arr.push(s.participant_id)
+      groups.set(s.points, arr)
+    }
+    const sortedPointValues = Array.from(groups.keys()).sort((a, b) => b - a)
+
+    const ordered: number[] = []
+    for (const pts of sortedPointValues) {
+      const groupIds = groups.get(pts) || []
+      groupIds.sort((a, b) => (ratingMap.get(a)! - ratingMap.get(b)!))
+      ordered.push(...groupIds)
+    }
+    ids = ordered
   }
 
   // Compute who already received a bye in previous rounds
-  let hadBye = new Set<number>()
+  const hadBye = new Set<number>()
   if (currentRoundNum > 1) {
     const prevRounds = await listRounds(tournamentId)
     const prevIds = (prevRounds || [])
@@ -645,7 +687,10 @@ export async function updateMatchResult(matchId: number, result: string): Promis
     return null
   }
 
-  const tournamentId = (match as any).rounds.tournament_id
+  const tournamentId = (() => {
+    const r = (match as { rounds?: Array<{ tournament_id: number }> }).rounds
+    return Array.isArray(r) && r.length > 0 ? r[0].tournament_id : 0
+  })()
   const scoring = await getTournamentScoring(tournamentId)
 
   let sw = 0, sb = 0
@@ -692,14 +737,15 @@ export async function updateMatchResult(matchId: number, result: string): Promis
 
   // After updating the result, check if the round has all matches finished
   try {
-    const roundId = (match as any).round_id as number
+    const roundId = (match as { round_id?: number }).round_id ?? 0
     if (Number.isFinite(roundId)) {
       const { data: roundMatches } = await supabase
         .from('matches')
         .select('id, result')
         .eq('round_id', roundId)
 
-      const allFinished = (roundMatches || []).length > 0 && (roundMatches || []).every((m: any) => m.result && m.result !== 'not_played')
+      const rms = (roundMatches || []) as Array<{ id: number; result: string | null }>
+      const allFinished = rms.length > 0 && rms.every((m) => m.result && m.result !== 'not_played')
       if (allFinished) {
         // Lock the round
         await supabase
@@ -708,10 +754,13 @@ export async function updateMatchResult(matchId: number, result: string): Promis
           .eq('id', roundId)
 
         // Trigger finalization check based on locked rounds
-        const tournamentId = (match as any).rounds.tournament_id as number
-        if (Number.isFinite(tournamentId)) {
+        const tournamentId2 = (() => {
+          const r = (match as { rounds?: Array<{ tournament_id: number }> }).rounds
+          return Array.isArray(r) && r.length > 0 ? r[0].tournament_id : 0
+        })()
+        if (Number.isFinite(tournamentId2)) {
           try {
-            await finalizeTournamentIfExceeded(tournamentId)
+            await finalizeTournamentIfExceeded(tournamentId2)
           } catch (fErr) {
             console.error('Finalization after round lock failed:', fErr)
           }
@@ -786,7 +835,7 @@ export async function finalizeTournamentIfExceeded(tournamentId: number): Promis
   }
 
   // Finalize when the number of locked (completed) rounds is at least planned total
-  const lockedCount = (rounds || []).filter((r: any) => r.status === 'locked').length
+  const lockedCount = ((rounds || []) as Array<{ status?: string }>).filter((r) => r.status === 'locked').length
   if (lockedCount >= planned) {
     const standings = await getStandings(tournamentId)
     const rows = standings.map((s, idx) => ({
@@ -895,7 +944,8 @@ export async function deleteAllRoundsForTournament(tournamentId: number): Promis
       return false
     }
 
-    const roundIds = (rounds || []).map(r => r.id)
+    const roundsRows = (rounds || []) as Array<{ id: number }>
+    const roundIds = roundsRows.map((r) => r.id)
 
     // Delete matches first to satisfy FK constraints (though ON DELETE CASCADE exists, be explicit)
     if (roundIds.length > 0) {
@@ -921,8 +971,8 @@ export async function deleteAllRoundsForTournament(tournamentId: number): Promis
     }
 
     return true
-  } catch (e) {
-    console.error('Failed to delete all rounds for tournament:', e)
+  } catch (err) {
+    console.error('Error in deleteAllRoundsForTournament:', err)
     return false
   }
 }

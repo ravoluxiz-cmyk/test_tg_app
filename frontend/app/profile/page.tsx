@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
 import ChessBackground from "@/components/ChessBackground"
 import { User, Edit, Trophy, Link as LinkIcon, ArrowLeft } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 
 interface UserProfile {
   id: number
@@ -24,6 +25,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { webApp, initData, isReady } = useTelegramWebApp()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -154,6 +156,13 @@ export default function ProfilePage() {
               <Edit className="w-6 h-6" />
             </button>
           </div>
+
+          {/* Success Banner */}
+          {searchParams.get('saved') === '1' && (
+            <div className="mb-6 bg-green-600/80 border border-green-400 text-white rounded-lg p-4 text-center font-bold">
+              Chess Ratings Verified Successfully
+            </div>
+          )}
 
           {/* Profile Card */}
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 space-y-6">

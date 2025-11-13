@@ -20,9 +20,9 @@ export async function GET() {
           message: "DB query failed",
           error: {
             message: error.message,
-            code: (error as any).code,
-            details: (error as any).details,
-            hint: (error as any).hint,
+            code: (error as { code: string }).code,
+            details: (error as { details?: unknown }).details ? String((error as { details?: unknown }).details) : undefined,
+            hint: (error as { hint?: unknown }).hint ? String((error as { hint?: unknown }).hint) : undefined,
           },
           env,
         },

@@ -136,8 +136,15 @@ export default function TournamentParticipantsPage() {
         },
       })
       if (!pairRes.ok) {
-        const errText = await pairRes.text().catch(() => "")
-        console.warn("Не удалось сгенерировать пары:", pairRes.status, errText)
+        let msg = "Не удалось сгенерировать пары для нового тура"
+        try {
+          const data = await pairRes.json()
+          if (data && typeof data.error === 'string') msg = data.error
+        } catch {}
+        if (pairRes.status === 502) {
+          msg = "BBP недоступен или вернул пустой результат. Проверьте BBP_PAIRINGS_BIN в .env.local, путь к бинарю и логи сервера. Пары можно сгенерировать позже на странице тура."
+        }
+        setError(msg)
       }
       router.push(`/admin/tournaments/${tournamentId}/tours/${newTour.id}`)
     } catch (e) {
@@ -220,7 +227,7 @@ export default function TournamentParticipantsPage() {
         const data = await res.json()
         setSearchResults(Array.isArray(data) ? data : [])
         setShowDropdown(true)
-      } catch (_) {
+      } catch { 
         // ignore fetch aborts
         setShowDropdown(false)
       } finally {
@@ -251,9 +258,12 @@ export default function TournamentParticipantsPage() {
         throw new Error(err.error || "Не удалось добавить тестовых пользователей")
       }
       const data = await res.json()
-      const insertedCount = typeof data?.inserted === "number"
-        ? data.inserted
-        : (typeof (data as any)?.count === "number" ? (data as any).count : 0)
+      const insertedCount =
+        typeof data === 'object' && data !== null && 'inserted' in data && typeof (data as { inserted: unknown }).inserted === 'number'
+          ? (data as { inserted: number }).inserted
+          : (typeof data === 'object' && data !== null && 'count' in data && typeof (data as { count: unknown }).count === 'number'
+              ? (data as { count: number }).count
+              : 0)
       setSeedInfo(`Добавлено пользователей: ${insertedCount}`)
       const usersRes = await fetch("/api/users")
       if (usersRes.ok) {
