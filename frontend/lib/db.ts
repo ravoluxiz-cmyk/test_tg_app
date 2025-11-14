@@ -88,6 +88,22 @@ export interface Match {
 
 // ===== USER FUNCTIONS =====
 
+export async function getUserById(userId: number): Promise<User | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return null // Not found
+    console.error('Error getting user by id:', error)
+    return null
+  }
+
+  return data as User
+}
+
 export async function getUserByTelegramId(telegramId: number): Promise<User | null> {
   const { data, error } = await supabase
     .from('users')

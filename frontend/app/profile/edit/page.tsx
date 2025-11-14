@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react"
 interface ProfileFormData {
   first_name: string
   last_name: string
+  rating_unified: string
   fide_rating: string
   chesscom_rating: string
   lichess_rating: string
@@ -23,6 +24,7 @@ export default function ProfileEditPage() {
   const [formData, setFormData] = useState<ProfileFormData>({
     first_name: tgUser?.first_name || "",
     last_name: tgUser?.last_name || "",
+    rating_unified: "",
     fide_rating: "",
     chesscom_rating: "",
     lichess_rating: "",
@@ -59,6 +61,9 @@ export default function ProfileEditPage() {
           setFormData({
             first_name: data.user.first_name || "",
             last_name: data.user.last_name || "",
+            rating_unified: (
+              data.user.fide_rating ?? data.user.chesscom_rating ?? data.user.lichess_rating ?? ""
+            ).toString(),
             fide_rating: data.user.fide_rating?.toString() || "",
             chesscom_rating: data.user.chesscom_rating?.toString() || "",
             lichess_rating: data.user.lichess_rating?.toString() || "",
@@ -123,13 +128,9 @@ export default function ProfileEditPage() {
       const profileData = {
         first_name: formData.first_name,
         last_name: formData.last_name,
-        fide_rating: formData.fide_rating ? parseInt(formData.fide_rating) : null,
-        chesscom_rating: formData.chesscom_rating
-          ? parseInt(formData.chesscom_rating)
-          : null,
-        lichess_rating: formData.lichess_rating
-          ? parseInt(formData.lichess_rating)
-          : null,
+        fide_rating: formData.rating_unified ? parseInt(formData.rating_unified) : null,
+        chesscom_rating: formData.rating_unified ? parseInt(formData.rating_unified) : null,
+        lichess_rating: formData.rating_unified ? parseInt(formData.rating_unified) : null,
         chesscom_url: formData.chesscom_url || null,
         lichess_url: formData.lichess_url || null,
         bio: formData.bio || null,
@@ -265,69 +266,22 @@ export default function ProfileEditPage() {
               </div>
             </div>
 
-            {/* Ratings */}
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 space-y-4">
-              <h2 className="text-xl font-bold text-white mb-4">Рейтинги</h2>
-
-              <div>
-                <label
-                  htmlFor="fide_rating"
-                  className="block text-white font-semibold mb-2"
-                >
-                  FIDE рейтинг
-                </label>
-                <input
-                  type="number"
-                  id="fide_rating"
-                  name="fide_rating"
-                  value={formData.fide_rating}
-                  onChange={handleChange}
-                  min="0"
-                  max="3000"
-                  className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/50 border border-white/30 focus:border-white focus:outline-none"
-                  placeholder="Например: 2000"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="chesscom_rating"
-                  className="block text-white font-semibold mb-2"
-                >
-                  Chess.com рейтинг
-                </label>
-                <input
-                  type="number"
-                  id="chesscom_rating"
-                  name="chesscom_rating"
-                  value={formData.chesscom_rating}
-                  onChange={handleChange}
-                  min="0"
-                  max="3500"
-                  className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/50 border border-white/30 focus:border-white focus:outline-none"
-                  placeholder="Например: 1800"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="lichess_rating"
-                  className="block text-white font-semibold mb-2"
-                >
-                  Lichess рейтинг
-                </label>
-                <input
-                  type="number"
-                  id="lichess_rating"
-                  name="lichess_rating"
-                  value={formData.lichess_rating}
-                  onChange={handleChange}
-                  min="0"
-                  max="3500"
-                  className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/50 border border-white/30 focus:border-white focus:outline-none"
-                  placeholder="Например: 1900"
-                />
-              </div>
+            {/* Unified Rating */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 space-y-2">
+              <h2 className="text-xl font-bold text-white mb-4">Рейтинг</h2>
+              <label htmlFor="rating_unified" className="block text-white font-semibold mb-2">Рейтинг</label>
+              <input
+                type="number"
+                id="rating_unified"
+                name="rating_unified"
+                value={formData.rating_unified}
+                onChange={handleChange}
+                min="0"
+                max="4000"
+                className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/50 border border-white/30 focus:border-white focus:outline-none"
+                placeholder="Например: 2000"
+              />
+              <p className="text-white/60 text-sm mt-2">Например: Lichess, Chess.com, FIDE</p>
             </div>
 
             {/* Social Links */}

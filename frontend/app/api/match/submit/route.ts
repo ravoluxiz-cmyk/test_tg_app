@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getTelegramUserFromHeaders } from "@/lib/telegram"
 import { updateMatchResult } from "@/lib/db"
+import { processMatchResultWithRatings } from "@/lib/rating/matchIntegration"
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,6 +27,21 @@ export async function POST(req: NextRequest) {
     const updated = await updateMatchResult(matchId, finalResult)
     if (!updated) {
       return NextResponse.json({ ok: false, error: "Failed to update match" }, { status: 500 })
+    }
+
+    // Process rating updates if match result is valid for rating
+    if (['white', 'black', 'draw'].includes(finalResult)) {
+      try {
+        const ratingResult = await processMatchResultWithRatings(matchId, finalResult)
+        if (ratingResult.success) {
+          console.log('Rating updates processed successfully:', ratingResult.ratingUpdates)
+        } else {
+          console.warn('Rating update failed:', ratingResult.error)
+        }
+      } catch (ratingError) {
+        console.error('Error processing rating updates:', ratingError)
+        // Don't fail the entire request if rating update fails
+      }
     }
 
     return NextResponse.json({ ok: true, match: updated })

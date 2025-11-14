@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { fetchUpcomingEvents } from "@/lib/google-calendar/client"
+import { fetchUpcomingEvents, calendarMetrics } from "@/lib/google-calendar/client"
 import { parseCalendarEvents } from "@/lib/google-calendar/parser"
 
 export async function GET(req: Request) {
@@ -12,10 +12,23 @@ export async function GET(req: Request) {
   try {
     const events = await fetchUpcomingEvents(50)
     const tournaments = parseCalendarEvents(events)
-    return NextResponse.json(tournaments)
+    return NextResponse.json(tournaments, {
+      headers: {
+        'X-Calendar-Cache-Hits': String(calendarMetrics.cacheHits),
+        'X-Calendar-Cache-Misses': String(calendarMetrics.cacheMisses),
+        'X-Calendar-Cache-Stale': String(calendarMetrics.cacheStaleHits),
+        'X-Calendar-API-Calls': String(calendarMetrics.apiCalls),
+        'X-Calendar-API-Errors': String(calendarMetrics.apiErrors),
+        'X-Calendar-Last-Latency': String(calendarMetrics.lastApiLatencyMs),
+      },
+    })
   } catch (e) {
     console.error("Failed to fetch calendar tournaments:", e)
-    // Return empty array on error to prevent breaking the UI
-    return NextResponse.json([])
+    return NextResponse.json([], {
+      headers: {
+        'X-Calendar-API-Errors': String(calendarMetrics.apiErrors),
+        'X-Calendar-Last-Error-At': String(calendarMetrics.lastErrorAt),
+      },
+    })
   }
 }

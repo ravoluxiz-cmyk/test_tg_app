@@ -1,11 +1,27 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import { useTelegramWebApp } from "@/hooks/useTelegramWebApp"
 import ChessBackground from "@/components/ChessBackground"
-import { User, Edit, Trophy, Link as LinkIcon, ArrowLeft } from "lucide-react"
+import { User, Edit, Link as LinkIcon, ArrowLeft } from "lucide-react"
 import { useSearchParams } from "next/navigation"
+import RatingDisplay from "@/components/rating/RatingDisplay"
+
+// Success banner component that uses searchParams
+function SuccessBanner() {
+  const searchParams = useSearchParams()
+  
+  if (searchParams.get('saved') !== '1') {
+    return null
+  }
+  
+  return (
+    <div className="mb-6 bg-green-600/80 border border-green-400 text-white rounded-lg p-4 text-center font-bold">
+      Chess Ratings Verified Successfully
+    </div>
+  )
+}
 
 interface UserProfile {
   id: number
@@ -25,7 +41,6 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { webApp, initData, isReady } = useTelegramWebApp()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -158,11 +173,9 @@ export default function ProfilePage() {
           </div>
 
           {/* Success Banner */}
-          {searchParams.get('saved') === '1' && (
-            <div className="mb-6 bg-green-600/80 border border-green-400 text-white rounded-lg p-4 text-center font-bold">
-              Chess Ratings Verified Successfully
-            </div>
-          )}
+          <Suspense fallback={null}>
+            <SuccessBanner />
+          </Suspense>
 
           {/* Profile Card */}
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 space-y-6">
@@ -188,35 +201,13 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Ratings */}
+            {/* Glicko2 Rating Display */}
             <div className="pt-4 border-t border-white/20">
-              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <Trophy className="w-5 h-5" />
-                Рейтинги
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {profile.fide_rating && (
-                  <div className="bg-white/10 rounded-lg p-4">
-                    <p className="text-white/70 text-sm">FIDE</p>
-                    <p className="text-white text-2xl font-bold">{profile.fide_rating}</p>
-                  </div>
-                )}
-                {profile.chesscom_rating && (
-                  <div className="bg-white/10 rounded-lg p-4">
-                    <p className="text-white/70 text-sm">Chess.com</p>
-                    <p className="text-white text-2xl font-bold">{profile.chesscom_rating}</p>
-                  </div>
-                )}
-                {profile.lichess_rating && (
-                  <div className="bg-white/10 rounded-lg p-4">
-                    <p className="text-white/70 text-sm">Lichess</p>
-                    <p className="text-white text-2xl font-bold">{profile.lichess_rating}</p>
-                  </div>
-                )}
-              </div>
-              {!profile.fide_rating && !profile.chesscom_rating && !profile.lichess_rating && (
-                <p className="text-white/50 text-center py-4">Рейтинги не указаны</p>
-              )}
+              <RatingDisplay 
+                userId={profile.id} 
+                showHistory={true} 
+                showRank={true} 
+              />
             </div>
 
             {/* Social Links */}

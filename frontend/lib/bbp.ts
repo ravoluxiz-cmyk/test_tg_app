@@ -2,7 +2,7 @@ import { spawn } from 'child_process'
 import { promises as fs, existsSync } from 'fs'
 import * as path from 'path'
 import * as os from 'os'
-import { getTournamentById, listTournamentParticipants, listRounds, listMatches, type Tournament, type TournamentParticipant, type Round, type Match, type User } from './db'
+import { getTournamentById, listTournamentParticipants, listRounds, listMatches, simpleSwissPairings, type Tournament, type TournamentParticipant, type Round, type Match, type User } from './db'
 import { supabase } from './supabase'
 
 /**
@@ -23,6 +23,11 @@ export interface BbpRunResult {
   pairs: Array<{ whitePos: number; blackPos: number | null }>
   rawOut?: string
   rawChecklist?: string
+}
+
+let lastBbpReason: string | undefined
+export function getLastBbpReason(): string | undefined {
+  return lastBbpReason
 }
 
 function resolveBbpBinary(): { ok: boolean; bin?: string; reason?: string } {
@@ -69,6 +74,9 @@ function resolveBbpBinary(): { ok: boolean; bin?: string; reason?: string } {
   // If env was provided but not found as a file, still return it (spawn will error if invalid)
   if (envBin && envBin.trim().length > 0) {
     const candidate = path.isAbsolute(envBin) ? envBin : path.resolve(process.cwd(), envBin)
+    if (!existsSync(candidate)) {
+      return { ok: false, reason: `BBP_PAIRINGS_BIN not found: ${candidate}` }
+    }
     return { ok: true, bin: candidate }
   }
 
@@ -262,10 +270,16 @@ function parseBbpOutFile(outText: string): BbpRunResult {
   return { pairs, rawOut: outText }
 }
 
-async function runBbpBinary(trfPath: string, outPath: string, listPath: string, binPath: string, systemFlag: '--dutch' | '--burstein'): Promise<{ outText: string; listText?: string }> {
+async function runBbpBinary(trfPath: string, outPath: string, listPath: string, binPath: string, systemFlag: '--dutch' | '--burstein', timeoutMs: number): Promise<{ outText: string; listText?: string }> {
   return new Promise((resolve, reject) => {
     const args = [systemFlag, trfPath, '-p', outPath, '-l', listPath]
     const child = spawn(binPath, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    let killed = false
+    const timer = setTimeout(() => {
+      killed = true
+      try { child.kill('SIGKILL') } catch {}
+      reject(new Error(`Timeout after ${timeoutMs}ms`))
+    }, timeoutMs)
 
     let stdout = ''
     let stderr = ''
@@ -274,14 +288,16 @@ async function runBbpBinary(trfPath: string, outPath: string, listPath: string, 
 
     child.on('error', (err) => {
       const wd = path.dirname(trfPath)
+      clearTimeout(timer)
       reject(new Error(`Failed to start bbpPairings process: ${err.message}\nworkDir=${wd}\ntrfPath=${trfPath}`))
     })
 
     child.on('close', async (code) => {
+      clearTimeout(timer)
       try {
         const outText = await fs.readFile(outPath, 'utf-8').catch(() => '')
         const listText = await fs.readFile(listPath, 'utf-8').catch(() => undefined)
-
+        if (killed) return
         if (code !== 0) {
           const wd = path.dirname(trfPath)
           const sTop = stdout.slice(0, 500)
@@ -305,14 +321,17 @@ async function runBbpBinary(trfPath: string, outPath: string, listPath: string, 
  * Returns inserted Match[] on success, or null on failure.
  */
 export async function generatePairingsWithBBP(tournamentId: number, roundId: number): Promise<Match[] | null> {
+  lastBbpReason = undefined
   const cfg = resolveBbpBinary()
   if (!cfg.ok || !cfg.bin) {
-    console.warn(`[BBP] Skipping: ${cfg.reason || 'not configured'}`)
+    lastBbpReason = cfg.reason || 'not configured'
+    console.warn(`[BBP] Skipping: ${lastBbpReason}`)
     return null
   }
 
   const tournament = await getTournamentById(tournamentId)
   if (!tournament) {
+    lastBbpReason = 'Tournament not found'
     console.error('[BBP] Tournament not found')
     return null
   }
@@ -352,21 +371,40 @@ export async function generatePairingsWithBBP(tournamentId: number, roundId: num
     systemFlag = '--burstein'
   }
 
-  // Run BBP Pairings
+  const timeoutMs = Number(process.env.BBP_TIMEOUT_MS || 6000)
+  const retries = Math.max(0, Math.min(2, Number(process.env.BBP_RETRIES || 1)))
   let outText = ''
-  try {
-    const res = await runBbpBinary(trfPath, outPath, listPath, cfg.bin, systemFlag)
-    outText = res.outText
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[BBP] Execution failed:', message)
-    return null
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await runBbpBinary(trfPath, outPath, listPath, cfg.bin, systemFlag, timeoutMs)
+      outText = res.outText
+      break
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      lastBbpReason = `Attempt ${attempt + 1} failed: ${message}`
+      console.error('[BBP] Execution failed:', message)
+      if (attempt === retries) {
+        return null
+      }
+      await new Promise(r => setTimeout(r, 300 + attempt * 300))
+    }
   }
 
   // Parse output
   const parsed = parseBbpOutFile(outText)
   if (!parsed.pairs || parsed.pairs.length === 0) {
+    lastBbpReason = 'No pairs parsed from output'
     console.warn('[BBP] No pairs parsed from output')
+    const devFallback = process.env.BBP_DEV_SWISS_FALLBACK
+    const isDev = process.env.NODE_ENV !== 'production'
+    if (isDev && devFallback && (devFallback === '1' || devFallback.toLowerCase() === 'true' || devFallback.toLowerCase() === 'yes')) {
+      const existingAfter = await listMatches(roundId).catch(() => [])
+      if (existingAfter && existingAfter.length > 0) {
+        return existingAfter as unknown as Match[]
+      }
+      const swiss = await simpleSwissPairings(tournamentId, roundId)
+      return swiss || null
+    }
     return null
   }
 

@@ -30,6 +30,15 @@ CREATE TABLE IF NOT EXISTS users (
 -- Index for faster lookups by telegram_id
 CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
 
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_rounds_tournament_id ON rounds(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_matches_round_id ON matches(round_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_participants_tournament_id ON tournament_participants(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_tournament_id ON leaderboard(tournament_id);
+
+-- Uniqueness: nickname must be unique within a tournament
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_tournament_participants_tournament_nickname ON tournament_participants(tournament_id, nickname);
+
 -- Tournaments table
 CREATE TABLE IF NOT EXISTS tournaments (
   id BIGSERIAL PRIMARY KEY,

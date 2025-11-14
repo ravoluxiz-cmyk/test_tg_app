@@ -9,7 +9,7 @@ import {
   finalizeTournamentIfExceeded,
   type Match,
 } from '@/lib/db'
-import { generatePairingsWithBBP } from '@/lib/bbp'
+import { generatePairingsWithBBP, getLastBbpReason } from '@/lib/bbp'
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string; tourId: string }> }) {
   const { id, tourId } = await context.params
@@ -43,14 +43,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     generated = await generatePairingsWithBBP(tournamentId, roundId)
 
     if (!generated || generated.length === 0) {
-      // No fallback to simple Swiss — BBP-only mode per product decision
-      return NextResponse.json({ error: 'BBP Pairings produced no matches. Check BBP configuration/binary.' }, { status: 502 })
+      const reason = getLastBbpReason()
+      return NextResponse.json({ error: 'BBP Pairings produced no matches. Check BBP configuration/binary.', reason }, { status: 502 })
     }
 
     // Always return the current round pairings after generation to keep response unified
     const matches = await listMatches(roundId)
 
-    // Generate standings screenshot (non-blocking)
     try {
       const standings = await getStandings(tournamentId)
       const img = new ImageResponse(
@@ -109,9 +108,32 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         ),
         { width: 800, height: 1200 }
       )
-
-      // TODO: send img to Telegram
-      void img
+      const token = String(process.env.TELEGRAM_BOT_TOKEN || '').trim()
+      const targetsRaw = String(process.env.ADMIN_TELEGRAM_ID || '').trim()
+      if (token && targetsRaw) {
+        void (async () => {
+          try {
+            const ab = await img.arrayBuffer()
+            const blob = new Blob([ab], { type: 'image/png' })
+            const targets = targetsRaw.split(',').map((s) => s.trim()).filter(Boolean)
+            await Promise.all(
+              targets.map(async (chatId) => {
+                const fd = new FormData()
+                fd.append('chat_id', chatId)
+                fd.append('photo', blob, 'standings.png')
+                fd.append('caption', `Турнир: ${tournament?.title || 'Без названия'}\nРаунд ${roundId}`)
+                const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: fd })
+                if (!res.ok) {
+                  const text = await res.text()
+                  throw new Error(`Telegram sendPhoto failed: ${res.status} ${text}`)
+                }
+              })
+            )
+          } catch (e) {
+            console.error('[Pairings] Telegram sendPhoto failed:', e)
+          }
+        })()
+      }
     } catch (sErr) {
       console.error('[Pairings] Screenshot generation/send failed:', sErr)
     }

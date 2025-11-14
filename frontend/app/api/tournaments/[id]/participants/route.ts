@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { addTournamentParticipant, listTournamentParticipants } from "@/lib/db"
+import { requireAdmin } from "@/lib/telegram"
 
 export async function GET(_: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -18,6 +19,10 @@ export async function GET(_: NextRequest, ctx: { params: Promise<{ id: string }>
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const adminUser = await requireAdmin(request.headers)
+    if (!adminUser) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
     const { id } = await ctx.params
     const tournamentId = Number(id)
     if (!Number.isFinite(tournamentId)) {
