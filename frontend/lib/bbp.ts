@@ -360,6 +360,26 @@ export async function generatePairingsWithBBP(tournamentId: number, roundId: num
   // Build positional map (1-based index)
   const posToParticipantId: number[] = participants.map(p => p.id!)
 
+  // Если указан bbp-mock.js в переменной окружения — не запускаем отдельный процесс,
+  // а используем встроенный генератор швейцарских пар.
+  if (cfg.bin && cfg.bin.includes('bbp-mock.js')) {
+    try {
+      const existingAfter = await listMatches(roundId).catch(() => [])
+      if (existingAfter && existingAfter.length > 0) {
+        return existingAfter as unknown as Match[]
+      }
+      const swiss = await simpleSwissPairings(tournamentId, roundId)
+      if (!swiss || swiss.length === 0) {
+        lastBbpReason = 'Mock BBP produced no matches'
+        return null
+      }
+      return swiss
+    } catch (e) {
+      lastBbpReason = e instanceof Error ? e.message : String(e)
+      return null
+    }
+  }
+
   // Prepare working directory and files
   const workDir = path.join(os.tmpdir(), `bbp-${tournamentId}-${roundId}`)
   await ensureFileDir(workDir)
