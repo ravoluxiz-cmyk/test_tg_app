@@ -9,10 +9,7 @@ import { ArrowLeft } from "lucide-react"
 interface ProfileFormData {
   first_name: string
   last_name: string
-  rating_unified: string
-  fide_rating: string
-  chesscom_rating: string
-  lichess_rating: string
+  rating: string
   chesscom_url: string
   lichess_url: string
   bio: string
@@ -24,10 +21,7 @@ export default function ProfileEditPage() {
   const [formData, setFormData] = useState<ProfileFormData>({
     first_name: tgUser?.first_name || "",
     last_name: tgUser?.last_name || "",
-    rating_unified: "",
-    fide_rating: "",
-    chesscom_rating: "",
-    lichess_rating: "",
+    rating: "",
     chesscom_url: "",
     lichess_url: "",
     bio: "",
@@ -61,22 +55,14 @@ export default function ProfileEditPage() {
           setFormData({
             first_name: data.user.first_name || "",
             last_name: data.user.last_name || "",
-            rating_unified: (
-              data.user.fide_rating ?? data.user.chesscom_rating ?? data.user.lichess_rating ?? ""
-            ).toString(),
-            fide_rating: data.user.fide_rating?.toString() || "",
-            chesscom_rating: data.user.chesscom_rating?.toString() || "",
-            lichess_rating: data.user.lichess_rating?.toString() || "",
+            rating: data.user.rating?.toString() || "",
             chesscom_url: data.user.chesscom_url || "",
             lichess_url: data.user.lichess_url || "",
             bio: data.user.bio || "",
           })
 
           // Check if profile is incomplete (only has Telegram data)
-          const isIncomplete = !data.user.fide_rating &&
-                               !data.user.chesscom_rating &&
-                               !data.user.lichess_rating &&
-                               !data.user.chesscom_url &&
+          const isIncomplete = !data.user.chesscom_url &&
                                !data.user.lichess_url &&
                                !data.user.bio
           setIsNewProfile(isIncomplete)
@@ -128,9 +114,7 @@ export default function ProfileEditPage() {
       const profileData = {
         first_name: formData.first_name,
         last_name: formData.last_name,
-        fide_rating: formData.rating_unified ? parseInt(formData.rating_unified) : null,
-        chesscom_rating: formData.rating_unified ? parseInt(formData.rating_unified) : null,
-        lichess_rating: formData.rating_unified ? parseInt(formData.rating_unified) : null,
+        rating: formData.rating ? parseInt(formData.rating) : undefined,
         chesscom_url: formData.chesscom_url || null,
         lichess_url: formData.lichess_url || null,
         bio: formData.bio || null,
@@ -269,19 +253,19 @@ export default function ProfileEditPage() {
             {/* Unified Rating */}
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 space-y-2">
               <h2 className="text-xl font-bold text-white mb-4">Рейтинг</h2>
-              <label htmlFor="rating_unified" className="block text-white font-semibold mb-2">Рейтинг</label>
+              <label htmlFor="rating" className="block text-white font-semibold mb-2">Рейтинг</label>
               <input
                 type="number"
-                id="rating_unified"
-                name="rating_unified"
-                value={formData.rating_unified}
+                id="rating"
+                name="rating"
+                value={formData.rating}
                 onChange={handleChange}
-                min="0"
-                max="4000"
+                min="100"
+                max="3000"
                 className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/50 border border-white/30 focus:border-white focus:outline-none"
                 placeholder="Например: 2000"
               />
-              <p className="text-white/60 text-sm mt-2">Например: Lichess, Chess.com, FIDE</p>
+              <p className="text-white/60 text-sm mt-2">Ваш текущий рейтинг (100-3000)</p>
             </div>
 
             {/* Social Links */}

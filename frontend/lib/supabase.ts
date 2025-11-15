@@ -245,9 +245,7 @@ export interface Database {
           username: string | null
           first_name: string
           last_name: string
-          fide_rating: number | null
-          chesscom_rating: number | null
-          lichess_rating: number | null
+          rating: number
           chesscom_url: string | null
           lichess_url: string | null
           bio: string | null
@@ -261,9 +259,7 @@ export interface Database {
           username?: string | null
           first_name: string
           last_name: string
-          fide_rating?: number | null
-          chesscom_rating?: number | null
-          lichess_rating?: number | null
+          rating?: number
           chesscom_url?: string | null
           lichess_url?: string | null
           bio?: string | null
@@ -277,9 +273,7 @@ export interface Database {
           username?: string | null
           first_name?: string
           last_name?: string
-          fide_rating?: number | null
-          chesscom_rating?: number | null
-          lichess_rating?: number | null
+          rating?: number
           chesscom_url?: string | null
           lichess_url?: string | null
           bio?: string | null

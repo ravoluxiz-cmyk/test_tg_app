@@ -29,9 +29,7 @@ interface UserProfile {
   username?: string
   first_name: string
   last_name: string
-  fide_rating?: number
-  chesscom_rating?: number
-  lichess_rating?: number
+  rating: number
   chesscom_url?: string
   lichess_url?: string
   bio?: string
@@ -95,9 +93,6 @@ export default function ProfilePage() {
   // Check if profile has only basic Telegram data (needs completion)
   function isProfileIncomplete(profile: UserProfile): boolean {
     return (
-      !profile.fide_rating &&
-      !profile.chesscom_rating &&
-      !profile.lichess_rating &&
       !profile.chesscom_url &&
       !profile.lichess_url &&
       !profile.bio

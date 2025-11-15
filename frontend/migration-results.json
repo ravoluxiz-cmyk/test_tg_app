@@ -1,0 +1,80 @@
+{
+  "tables": {
+    "users": {
+      "status": "OK",
+      "rowCount": 1,
+      "hasData": true
+    },
+    "tournaments": {
+      "status": "OK",
+      "rowCount": 1,
+      "hasData": true
+    },
+    "tournament_participants": {
+      "status": "OK",
+      "rowCount": 1,
+      "hasData": true
+    },
+    "rounds": {
+      "status": "OK",
+      "rowCount": 1,
+      "hasData": true
+    },
+    "matches": {
+      "status": "OK",
+      "rowCount": 1,
+      "hasData": true
+    },
+    "leaderboard": {
+      "status": "ERROR",
+      "error": "Could not find the table 'public.leaderboard' in the schema cache"
+    },
+    "player_ratings": {
+      "status": "OK",
+      "rowCount": 1,
+      "hasData": true
+    },
+    "rating_history": {
+      "status": "OK",
+      "rowCount": 0,
+      "hasData": false
+    },
+    "rating_periods": {
+      "status": "OK",
+      "rowCount": 0,
+      "hasData": false
+    },
+    "player_rating_stats": {
+      "status": "OK",
+      "rowCount": 0,
+      "hasData": false
+    },
+    "tournament_rating_adjustments": {
+      "status": "OK",
+      "rowCount": 0,
+      "hasData": false
+    },
+    "rating_leaderboard": {
+      "status": "OK",
+      "rowCount": 0,
+      "hasData": false
+    },
+    "recent_rating_changes": {
+      "status": "OK",
+      "rowCount": 0,
+      "hasData": false
+    }
+  },
+  "relationships": {},
+  "dataIntegrity": {
+    "usersWithRatings": 30,
+    "tournamentParticipants": 12,
+    "playerRatingsCount": 30,
+    "leaderboardTop10": 0,
+    "avgRating": 1500,
+    "triggersWork": true
+  },
+  "errors": [
+    "Таблица leaderboard: Could not find the table 'public.leaderboard' in the schema cache"
+  ]
+}

@@ -7,9 +7,7 @@ export interface User {
   username?: string | null
   first_name: string
   last_name: string
-  fide_rating?: number | null
-  chesscom_rating?: number | null
-  lichess_rating?: number | null
+  rating: number
   chesscom_url?: string | null
   lichess_url?: string | null
   bio?: string | null
@@ -21,9 +19,7 @@ export interface User {
 export interface UserProfileData {
   first_name: string
   last_name: string
-  fide_rating?: number | null
-  chesscom_rating?: number | null
-  lichess_rating?: number | null
+  rating?: number
   chesscom_url?: string | null
   lichess_url?: string | null
   bio?: string | null
@@ -128,9 +124,7 @@ export async function createUser(user: User): Promise<User | null> {
       username: user.username || null,
       first_name: user.first_name,
       last_name: user.last_name,
-      fide_rating: user.fide_rating || null,
-      chesscom_rating: user.chesscom_rating || null,
-      lichess_rating: user.lichess_rating || null,
+      rating: user.rating || 800,
       chesscom_url: user.chesscom_url || null,
       lichess_url: user.lichess_url || null,
       bio: user.bio || null,
@@ -156,9 +150,7 @@ export async function updateUserProfile(
     .update({
       first_name: profileData.first_name,
       last_name: profileData.last_name,
-      fide_rating: profileData.fide_rating || null,
-      chesscom_rating: profileData.chesscom_rating || null,
-      lichess_rating: profileData.lichess_rating || null,
+      rating: profileData.rating || 800,
       chesscom_url: profileData.chesscom_url || null,
       lichess_url: profileData.lichess_url || null,
       bio: profileData.bio || null
@@ -180,9 +172,6 @@ export async function upsertUser(user: User): Promise<User | null> {
     const updated = await updateUserProfile(user.telegram_id, {
       first_name: user.first_name,
       last_name: user.last_name,
-      fide_rating: user.fide_rating,
-      chesscom_rating: user.chesscom_rating,
-      lichess_rating: user.lichess_rating,
       chesscom_url: user.chesscom_url,
       lichess_url: user.lichess_url,
       bio: user.bio
@@ -557,8 +546,7 @@ export async function simpleSwissPairings(tournamentId: number, roundId: number)
 
   const effectiveRating = (u: User | undefined) => {
     if (!u) return 0
-    const r = u.fide_rating ?? u.chesscom_rating ?? u.lichess_rating ?? 0
-    return typeof r === 'number' ? r : 0
+    return u.rating || 0
   }
 
   const ratingMap = new Map<number, number>()

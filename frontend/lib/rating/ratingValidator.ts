@@ -142,9 +142,9 @@ export class RatingValidator {
       const suggestions: string[] = []
 
       // Check for chess ratings
-      if (!user.fide_rating && !user.chesscom_rating && !user.lichess_rating) {
-        missingFields.push('chess_ratings')
-        suggestions.push('Добавьте хотя бы один рейтинг (FIDE, Chess.com или Lichess)')
+      if (!user.rating || user.rating < 100) {
+        missingFields.push('rating')
+        suggestions.push('Рейтинг должен быть не менее 100')
       }
 
       // Check for profile completeness
@@ -180,27 +180,22 @@ export class RatingValidator {
    * Check if user has required rating
    */
   private hasRequiredRating(user: User): boolean {
-    return !!(user.fide_rating || user.chesscom_rating || user.lichess_rating)
+    return !!(user.rating && user.rating >= 100)
   }
 
   /**
    * Get effective rating (priority: FIDE > Chess.com > Lichess)
    */
   private getEffectiveRating(user: User): number {
-    return user.fide_rating || user.chesscom_rating || user.lichess_rating || 0
+    return user.rating || 0
   }
 
   /**
    * Validate rating consistency across platforms
    */
   private validateRatingConsistency(user: User): boolean {
-    const ratings = [user.fide_rating, user.chesscom_rating, user.lichess_rating]
-      .filter((rating): rating is number => rating !== null && rating !== undefined)
-    
-    if (ratings.length < 2) return true
-    
-    const maxDiff = Math.max(...ratings) - Math.min(...ratings)
-    return maxDiff <= this.MAX_RATING_DIFFERENCE
+    // Unified rating system - no need to check consistency across platforms
+    return true
   }
 
   /**
@@ -272,7 +267,7 @@ export class RatingValidator {
         .single()
 
       return data ? new Date(data.created_at) : null
-    } catch (error) {
+    } catch {
       return null
     }
   }

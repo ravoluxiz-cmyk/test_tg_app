@@ -7,8 +7,12 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest",
+    "test:unit": "vitest run",
     "bbp:smoke": "node scripts/bbp-smoke.js",
-    "bbp:integration": "node scripts/bbp-integration.js"
+    "bbp:integration": "node scripts/bbp-integration.js",
+    "migrate:ratings": "node scripts/migrate-ratings.js",
+    "verify:ratings": "node scripts/verify-ratings.js"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
@@ -34,9 +38,12 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
+    "jsdom": "^27.2.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.9"
   }
 }

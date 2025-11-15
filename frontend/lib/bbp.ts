@@ -171,7 +171,7 @@ async function buildBbpTrfx(
   // Players: use position order as IDs, include nickname or user full name
   let pos = 1
   for (const p of participants) {
-    const rating = p.user?.fide_rating ?? null
+    const rating = p.user?.rating ?? null
     const name = p.nickname || `${p.user?.first_name || ''} ${p.user?.last_name || ''}`.trim() || (p.user?.username || `Player${pos}`)
     const score = pointsByParticipant.get(p.id!) || 0
     lines.push(make001Line(pos, name, rating, score))

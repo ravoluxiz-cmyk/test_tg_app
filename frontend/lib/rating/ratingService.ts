@@ -118,31 +118,27 @@ export class RatingService {
    * Calculate initial rating based on existing chess ratings
    */
   private calculateInitialRating(user: User): { rating: number; rd: number; volatility: number } {
-    // Priority: FIDE > Chess.com > Lichess > Default
-    if (user.fide_rating) {
+    // Use unified rating field with confidence-based RD values
+    if (user.rating && user.rating > 800) {
+      // User has an established rating (above default)
       return {
-        rating: user.fide_rating,
-        rd: 100,  // Higher confidence in FIDE rating
+        rating: user.rating,
+        rd: 150,  // Medium confidence for established players
         volatility: 0.06
       }
-    } else if (user.chesscom_rating) {
+    } else if (user.rating && user.rating <= 800) {
+      // User has default or below-default rating
       return {
-        rating: user.chesscom_rating,
-        rd: 150,  // Medium confidence
-        volatility: 0.06
-      }
-    } else if (user.lichess_rating) {
-      return {
-        rating: user.lichess_rating,
-        rd: 150,  // Medium confidence
+        rating: user.rating,
+        rd: 250,  // Higher uncertainty for new/unrated players
         volatility: 0.06
       }
     }
 
-    // Default values for new players
+    // Fallback to default values (should not happen with NOT NULL constraint)
     return {
-      rating: 1500,
-      rd: 350,    // High uncertainty
+      rating: 800,    // Default unified rating
+      rd: 350,        // High uncertainty
       volatility: 0.06
     }
   }

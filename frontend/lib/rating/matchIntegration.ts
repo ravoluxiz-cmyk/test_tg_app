@@ -210,7 +210,7 @@ export async function validateRatingEligibility(userId: number): Promise<{
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('fide_rating, chesscom_rating, lichess_rating')
+      .select('rating')
       .eq('id', userId)
       .single()
 
@@ -225,26 +225,16 @@ export async function validateRatingEligibility(userId: number): Promise<{
     const errors: string[] = []
     const warnings: string[] = []
 
-    // Check if user has at least one rating
-    const hasRating = user.fide_rating || user.chesscom_rating || user.lichess_rating
+    // Check if user has valid rating
+    const hasRating = user.rating && user.rating >= 100 && user.rating <= 3000
     if (!hasRating) {
-      errors.push('User must have at least one chess rating (FIDE, Chess.com, or Lichess)')
+      errors.push('User must have a valid chess rating (100-3000)')
     }
 
     // Check minimum rating (if needed)
     const minRating = 800
-    const effectiveRating = user.fide_rating || user.chesscom_rating || user.lichess_rating || 0
-    if (effectiveRating < minRating) {
-      warnings.push(`Low rating (${effectiveRating}) may affect pairing quality`)
-    }
-
-    // Check rating consistency
-    const ratings = [user.fide_rating, user.chesscom_rating, user.lichess_rating].filter(Boolean)
-    if (ratings.length >= 2) {
-      const maxDiff = Math.max(...ratings) - Math.min(...ratings)
-      if (maxDiff > 400) {
-        warnings.push('Large rating discrepancy between platforms detected')
-      }
+    if (user.rating < minRating) {
+      warnings.push(`Low rating (${user.rating}) may affect pairing quality`)
     }
 
     return {

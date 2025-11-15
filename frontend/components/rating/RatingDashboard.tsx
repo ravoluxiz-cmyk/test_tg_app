@@ -110,14 +110,7 @@ export default function RatingDashboard({
     setRefreshing(false);
   };
 
-  const getTimeControlLabel = (control: string): string => {
-    switch (control) {
-      case 'blitz': return 'Блиц';
-      case 'rapid': return 'Рапид';
-      case 'classical': return 'Классика';
-      default: return control;
-    }
-  };
+
 
   if (loading) {
     return (

@@ -40,7 +40,7 @@ export class RatingPairingService {
       const ratings = await this.getParticipantRatings(participants)
       
       // Filter out participants without ratings if required
-      const validParticipants = this.filterParticipantsByRating(participants, ratings, tournamentConfig)
+      const validParticipants = this.filterParticipantsByRating(participants, ratings)
       
       if (validParticipants.length < 2) {
         return []
@@ -53,8 +53,7 @@ export class RatingPairingService {
       const pairings = await this.generateOptimalPairings(
         sortedParticipants,
         ratings,
-        tournamentConfig,
-        _roundNumber
+        tournamentConfig
       )
 
       return pairings
@@ -139,8 +138,7 @@ export class RatingPairingService {
    */
   private filterParticipantsByRating(
     participants: TournamentParticipant[],
-    ratings: Map<number, number>,
-    _config: RatingPairingConfig // Currently unused but kept for future use
+    ratings: Map<number, number>
   ): TournamentParticipant[] {
     return participants.filter(participant => {
       const rating = ratings.get(participant.user_id)
@@ -168,8 +166,7 @@ export class RatingPairingService {
   private async generateOptimalPairings(
     participants: TournamentParticipant[],
     ratings: Map<number, number>,
-    config: RatingPairingConfig,
-    roundNumber: number
+    config: RatingPairingConfig
   ): Promise<RatingAwarePairing[]> {
     const pairings: RatingAwarePairing[] = []
     const used = new Set<number>()
@@ -211,7 +208,7 @@ export class RatingPairingService {
 
       if (bestOpponent && bestScore >= config.quality.minQualityScore) {
         const opponentRating = ratings.get(bestOpponent.user_id) || 0
-        const colorBalance = this.calculateColorBalance(player1.user_id, bestOpponent.user_id)
+        const colorBalance = this.calculateColorBalance()
 
         pairings.push({
           whiteParticipant: player1,
@@ -253,7 +250,7 @@ export class RatingPairingService {
   /**
    * Calculate color balance score
    */
-  private calculateColorBalance(_player1Id: number, _player2Id: number): number {
+  private calculateColorBalance(): number {
     // For now, return a simple balance score
     // This could be enhanced with actual color history tracking
     return 0.5 // Neutral balance

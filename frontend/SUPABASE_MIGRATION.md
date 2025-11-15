@@ -21,6 +21,41 @@
 
 Этот файл создаст все таблицы и импортирует существующие данные одной командой.
 
+### Добавление рейтинговой системы Glicko2
+
+1. Откройте SQL Editor в Supabase
+2. Вставьте содержимое `frontend/database/migrations/20241113_add_rating_system.sql`
+3. Выполните запрос — будут созданы таблицы: `player_ratings`, `rating_history`, `player_rating_stats`, `rating_periods`, триггеры и представления `rating_leaderboard`, `recent_rating_changes`
+
+#### Бэкфилл начальных рейтингов
+
+После применения схемы выполните бэкфилл начальных рейтингов на основе полей пользователей:
+
+```bash
+cd frontend
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=<service_role_key> \
+npm run migrate:ratings
+```
+
+Скрипт создаст записи в `player_ratings` для всех пользователей, у кого они отсутствуют, используя приоритет FIDE → Chess.com → Lichess → 1500.
+
+#### Верификация миграции
+
+```bash
+cd frontend
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=<service_role_key> \
+npm run verify:ratings
+```
+
+Скрипт проверит доступность таблиц/представлений и выполнит выборки.
+
+#### Непрерывность работы
+
+- Миграция добавляет новые объекты и не изменяет существующие таблицы, поэтому даунтайм отсутствует.
+- Рекомендуется выполнять SQL в транзакции через Supabase SQL Editor, и сначала включить схемы, затем бэкфилл.
+
 ### Вариант B: Раздельная миграция
 
 **Только схема (без данных)**
