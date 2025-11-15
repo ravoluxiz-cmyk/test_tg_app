@@ -113,7 +113,7 @@ export default function TourManagePage() {
           if (err && typeof err.error === 'string') msg = err.error
         } catch {}
         if (res.status === 502) {
-          msg = "BBP недоступен или вернул пустой результат. Проверьте BBP_PAIRINGS_BIN в .env.local, путь к бинарю и логи сервера."
+          msg = "BBP недоступен или вернул пустой результат. Для Vercel используйте bbp-mock.js вместо нативного бинарника. Проверьте BBP_PAIRINGS_BIN в .env.local."
         }
         throw new Error(msg)
       }
@@ -170,7 +170,7 @@ export default function TourManagePage() {
           if (err && typeof err.error === 'string') msg = err.error
         } catch {}
         if (pairRes.status === 502) {
-          msg = "BBP недоступен или вернул пустой результат. Проверьте BBP_PAIRINGS_BIN в .env.local, путь к бинарю и логи сервера."
+          msg = "BBP недоступен или вернул пустой результат. Для Vercel используйте bbp-mock.js вместо нативного бинарника. Проверьте BBP_PAIRINGS_BIN в .env.local."
         }
         throw new Error(msg)
       }

@@ -154,7 +154,7 @@ export default function TournamentParticipantsPage() {
           if (data && typeof data.error === 'string') msg = data.error
         } catch {}
         if (pairRes.status === 502) {
-          msg = "BBP недоступен или вернул пустой результат. Проверьте BBP_PAIRINGS_BIN в .env.local, путь к бинарю и логи сервера. Пары можно сгенерировать позже на странице тура."
+          msg = "BBP недоступен или вернул пустой результат. Для Vercel используйте bbp-mock.js вместо нативного бинарника. Проверьте BBP_PAIRINGS_BIN в .env.local. Пары можно сгенерировать позже на странице тура."
         }
         setError(msg)
       }
@@ -318,7 +318,7 @@ export default function TournamentParticipantsPage() {
                   {searchLoading && (
                     <div className="px-3 py-2 text-white/70">Идет поиск...</div>
                   )}
-                  {!searchLoading && searchResults.length === 0 && (
+                  {!searchLoading && searchResults.length === 0 && showDropdown && (
                     <div className="px-3 py-2 text-white/70">Ничего не найдено</div>
                   )}
                   {!searchLoading && searchResults.length > 0 && (
@@ -331,6 +331,7 @@ export default function TournamentParticipantsPage() {
                             setSelectedUserId(u.id)
                             setQuery(`${u.first_name ?? ""} ${u.last_name ?? ""} (@${u.username || u.telegram_id})`)
                             setShowDropdown(false)
+                            setSearchResults([])
                           }}
                           className="w-full text-left px-3 py-2 hover:bg-white/10 text-white"
                         >

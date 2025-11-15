@@ -326,6 +326,12 @@ export async function generatePairingsWithBBP(tournamentId: number, roundId: num
   if (!cfg.ok || !cfg.bin) {
     lastBbpReason = cfg.reason || 'not configured'
     console.warn(`[BBP] Skipping: ${lastBbpReason}`)
+    // Проверяем, запущены ли в serverless окружении (Vercel)
+    const isServerless = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production'
+    if (isServerless && !cfg.bin?.includes('mock')) {
+      console.warn('[BBP] В serverless окружении рекомендуется использовать bbp-mock.js')
+      lastBbpReason = 'BBP бинарник недоступен в serverless окружении. Используйте bbp-mock.js для генерации пар.'
+    }
     return null
   }
 
