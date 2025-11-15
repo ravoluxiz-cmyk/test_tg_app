@@ -11,6 +11,7 @@ type User = {
   username: string | null
   first_name: string | null
   last_name: string | null
+  rating?: number
 }
 
 type Participant = {
@@ -81,19 +82,30 @@ export default function TournamentParticipantsPage() {
     setAdding(true)
     setError(null)
     try {
-      const res = await fetch(`/api/tournaments/${tournamentId}/participants`, {
+      const res = await fetch(`/api/participants/add`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: selectedUserId, nickname: nickname.trim() }),
+        headers: { 
+          "Content-Type": "application/json",
+          ...(initData ? { Authorization: `Bearer ${initData}` } : {}),
+        },
+        body: JSON.stringify({ 
+          tournament_id: tournamentId, 
+          user_id: selectedUserId, 
+          nickname: nickname.trim() 
+        }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
+        if (res.status === 403) {
+          throw new Error("Недостаточно прав для добавления участников")
+        }
         throw new Error(err.error || "Не удалось добавить участника")
       }
       const created = await res.json()
       setParticipants((prev) => [...prev, created])
       setNickname("")
       setSelectedUserId(null)
+      setQuery("")
     } catch (e) {
       setError(e instanceof Error ? e.message : "Неизвестная ошибка")
     } finally {
@@ -201,13 +213,13 @@ export default function TournamentParticipantsPage() {
     ? safeUsers.filter((u) => (u.username || "").toLowerCase().includes(query.toLowerCase()))
     : []
 
-  // Live search when query starts with '@'
+  // Live search when query starts with '@' or contains name
   useEffect(() => {
     const raw = query.trim()
     const isAt = raw.startsWith("@")
-    const fragment = isAt ? raw.slice(1).trim() : ""
+    const fragment = isAt ? raw.slice(1).trim() : raw
 
-    if (!isAt || fragment.length === 0) {
+    if (fragment.length < 2) {
       setSearchResults([])
       setShowDropdown(false)
       setSearchLoading(false)
@@ -218,14 +230,14 @@ export default function TournamentParticipantsPage() {
     const controller = new AbortController()
     const timeoutId = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/users/search?q=${encodeURIComponent(raw)}&limit=8`, { signal: controller.signal })
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(fragment)}&limit=8`, { signal: controller.signal })
         if (!res.ok) {
           setSearchResults([])
           setShowDropdown(false)
           return
         }
         const data = await res.json()
-        setSearchResults(Array.isArray(data) ? data : [])
+        setSearchResults(Array.isArray(data.users) ? data.users : [])
         setShowDropdown(true)
       } catch { 
         // ignore fetch aborts
@@ -290,7 +302,7 @@ export default function TournamentParticipantsPage() {
           {/* Форма добавления участника */}
           <div className="space-y-4 bg-white/5 p-4 rounded-lg">
             <div className="relative">
-              <label className="text-white block mb-2">Поиск по нику Telegram</label>
+              <label className="text-white block mb-2">Поиск участника</label>
               <input
                 value={query}
                 onChange={(e) => {
@@ -298,7 +310,7 @@ export default function TournamentParticipantsPage() {
                   setSelectedUserId(null)
                 }}
                 className="w-full bg-white/10 text-white p-3 rounded-lg outline-none"
-                placeholder={loading ? "Загрузка пользователей..." : "Введите ник, например test1"}
+                placeholder={loading ? "Загрузка пользователей..." : "Введите имя, фамилию или ник, например Чеслав или @username"}
               />
               {/* Dropdown results when searching with '@' */}
               {showDropdown && (
@@ -317,12 +329,13 @@ export default function TournamentParticipantsPage() {
                           type="button"
                           onClick={() => {
                             setSelectedUserId(u.id)
-                            setQuery(`@${u.username || ""}`)
+                            setQuery(`${u.first_name ?? ""} ${u.last_name ?? ""} (@${u.username || u.telegram_id})`)
                             setShowDropdown(false)
                           }}
                           className="w-full text-left px-3 py-2 hover:bg-white/10 text-white"
                         >
-                          @{u.username || u.telegram_id} — {u.first_name ?? ""} {u.last_name ?? ""}
+                          <div className="font-medium">{u.first_name ?? ""} {u.last_name ?? ""}</div>
+                          <div className="text-sm text-white/70">@{u.username || u.telegram_id} • Рейтинг: {u.rating || 800}</div>
                         </button>
                       ))}
                     </div>
@@ -349,7 +362,10 @@ export default function TournamentParticipantsPage() {
               )}
               {selectedUserId && (
                 <div className="mt-2 text-white/80 text-sm">
-                  Выбран: @{users.find((u) => u.id === selectedUserId)?.username || users.find((u) => u.id === selectedUserId)?.telegram_id || ""}
+                  Выбран: {(() => {
+                    const user = users.find((u) => u.id === selectedUserId)
+                    return user ? `${user.first_name ?? ""} ${user.last_name ?? ""} (@${user.username || user.telegram_id})` : "Неизвестный пользователь"
+                  })()}
                   <button
                     type="button"
                     onClick={() => {

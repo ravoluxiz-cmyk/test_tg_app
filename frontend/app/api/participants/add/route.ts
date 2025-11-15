@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { addTournamentParticipant } from "@/lib/db"
 import { supabase } from "@/lib/supabase"
+import { requireAdmin } from "@/lib/telegram"
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authorization - only admins can add participants
+    const adminUser = await requireAdmin(request.headers)
+    if (!adminUser) {
+      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 })
+    }
+
     const body = await request.json()
     const { tournament_id, user_id, nickname } = body as {
       tournament_id?: number
